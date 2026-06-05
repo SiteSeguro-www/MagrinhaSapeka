@@ -33,7 +33,7 @@ export function VideoPlayer({ src, vastTag, className }: VideoPlayerProps) {
           adTagUrl: vastTag,
         });
         (player as any).ima.initializeAdDisplayContainer();
-        player.requestAds();
+        (player as any).ima.requestAds();
       }
     });
 
