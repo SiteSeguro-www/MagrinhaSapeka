@@ -10,7 +10,7 @@ interface HeroProps {
 }
 
 export function Hero({ onActivate, isUnlocked }: HeroProps) {
-  const [profileImg, setProfileImg] = useState<string>("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop");
+  const [profileImg, setProfileImg] = useState<string>("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&h=800&fit=crop");
   const [isProfileImgLocal, setIsProfileImgLocal] = useState<boolean>(false);
 
   useEffect(() => {
@@ -18,7 +18,6 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
       let profile_url = '';
       let is_url_local = false;
 
-      // 1. Tenta carregar do json estático local (Vite/Vercel)
       try {
         const localRes = await fetch('/media/profile_config.json');
         if (localRes.ok) {
@@ -32,7 +31,6 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
         console.warn("Sem profile_config.json estático:", e);
       }
 
-      // 2. Tenta carregar do backend (Cloud Run) e sobrescreve se houver rede/sucesso
       try {
         const res = await fetch(getApiUrl('/api/profile-config'));
         if (res.ok) {
@@ -55,77 +53,85 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
   }, []);
 
   return (
-    <section className="relative w-full min-h-[80vh] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-      {/* Background elegant gradient fx */}
-      <div className="absolute inset-0 pointer-events-none w-full h-full">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] opacity-50"></div>
+    <section className="relative w-full h-[85vh] md:h-[95vh] flex items-end overflow-hidden">
+      {/* Cinematic Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={getMediaUrl(profileImg, isProfileImgLocal)} 
+          alt="Featured Background"
+          className="w-full h-full object-cover"
+        />
+        {/* Cinematic Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
       </div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 max-w-4xl mx-auto flex flex-col items-center pt-10"
+        className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-24 pointer-events-none"
       >
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-          className="relative mb-8"
-        >
-          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative z-10 glass ring-4 ring-primary/20">
-            <img 
-              src={getMediaUrl(profileImg, isProfileImgLocal)} 
-              alt="Magrinha Sapeka - Perfil Oficial"
-              title="Magrinha Sapeka Oficial"
-              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-            />
-          </div>
-          <div className="absolute inset-0 bg-primary/40 rounded-full blur-[30px] -z-10 animate-pulse"></div>
-        </motion.div>
-
-        <span className="px-4 py-1.5 rounded-full glass text-sm font-semibold text-primary mb-6 uppercase tracking-wider">
-          Conteúdo Exclusivo
-        </span>
-        
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
-          <span className="block">Magrinha Sapeka</span>
-          {!isUnlocked && (
-            <span className="block text-2xl md:text-4xl font-medium mt-4 text-foreground/80">
-              ATIVE AS NOTIFICAÇÕES PARA VER MEUS CONTEÚDOS GRATUITAMENTE
-            </span>
-          )}
-        </h1>
-
-        {!isUnlocked && (
-          <>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed">
-              Sempre que eu publicar algo novo você será avisado e poderá acessar meus conteúdos gratuitamente.
-            </p>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onActivate}
-              className="flex items-center gap-3 bg-primary text-white px-8 py-5 rounded-2xl font-bold text-xl md:text-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all"
-            >
-              <BellRing size={28} />
-              <span>ATIVAR NOTIFICAÇÕES</span>
-            </motion.button>
-          </>
-        )}
-        
-        {isUnlocked && (
+        <div className="max-w-2xl pointer-events-auto">
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-primary mt-4 font-semibold text-xl md:text-2xl flex items-center gap-3 glass px-8 py-4 rounded-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center gap-2 mb-4"
           >
-            <BellRing size={28} />
-            Acesso Liberado! Aproveite o conteúdo.
+            <div className="w-1 h-8 bg-primary rounded-full" />
+            <span className="text-white font-black text-sm md:text-base uppercase tracking-[0.3em]">
+              Série Original
+            </span>
           </motion.div>
-        )}
+
+          <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mb-4 leading-[0.9]">
+            MAGRINHA<br />
+            <span className="text-primary italic">SAPEKA</span>
+          </h1>
+
+          {!isUnlocked && (
+            <p className="text-lg md:text-2xl text-gray-200 mb-8 font-medium max-w-lg leading-snug drop-shadow-lg">
+              Ative as notificações para liberar acesso imediato a todas as fotos e vídeos exclusivos gratuitamente.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            {!isUnlocked ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onActivate}
+                className="flex items-center gap-3 bg-white text-black px-8 py-4 rounded-md font-black text-lg md:text-xl transition-all shadow-2xl hover:bg-gray-200"
+              >
+                <BellRing size={24} />
+                <span>ATIVAR NOTIFICAÇÕES</span>
+              </motion.button>
+            ) : (
+              <div className="flex items-center gap-3 bg-primary/20 backdrop-blur-xl border border-primary/40 text-white px-8 py-4 rounded-md font-black text-lg md:text-xl shadow-2xl">
+                <BellRing size={24} className="text-primary animate-pulse" />
+                <span>ACESSO LIBERADO!</span>
+              </div>
+            )}
+            
+            <button className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-8 py-4 rounded-md font-bold text-lg hover:bg-white/30 transition-all border border-white/10">
+              Saber mais
+            </button>
+          </div>
+        </div>
       </motion.div>
+
+      {/* Decorative Badge */}
+      <div className="absolute top-24 right-8 hidden xl:block animate-fade-in">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-primary/30 rounded-full blur-2xl group-hover:bg-primary/50 transition-all" />
+          <img 
+            src={getMediaUrl(profileImg, isProfileImgLocal)} 
+            className="w-48 h-48 rounded-full border-2 border-white/20 relative z-10 object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+            alt="Profile Avatar"
+          />
+        </div>
+      </div>
     </section>
   );
 }

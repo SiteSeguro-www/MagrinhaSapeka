@@ -25,20 +25,18 @@ const DUMMY_CONTENT: MediaItem[] = [
 
 const ITEMS_PER_PAGE = 6;
 
+import { NetflixRow } from './NetflixRow';
+
 export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onMediaClick: () => void }) {
   const [allItems, setAllItems] = useState<MediaItem[]>(DUMMY_CONTENT);
-  const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
   const [activeMedia, setActiveMedia] = useState<{ url: string; type: string; isLocal?: boolean } | null>(null);
-  const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Busca as mídias de verdade no servidor Express
   useEffect(() => {
     async function loadMedia() {
       try {
         let localList: MediaItem[] = [];
         let apiList: MediaItem[] = [];
 
-        // 1. Tenta obter o catálogo local estático (Vite/Vercel)
         try {
           const localRes = await fetch('/media/media.json');
           if (localRes.ok) {
@@ -48,7 +46,6 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           console.warn("Sem media.json estático:", e);
         }
 
-        // 2. Tenta obter da API estruturada do backend (Cloud Run)
         try {
           const res = await fetch(getApiUrl('/api/media'));
           if (res.ok) {
@@ -58,13 +55,11 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           console.error("Erro ao ler mídias da API dinâmica:", err);
         }
 
-        // 3. Mescla ambas as listas removendo duplicidades baseando-se no ID ou URL
         const mergedMap = new Map<string, MediaItem>();
 
         if (Array.isArray(localList)) {
           localList.forEach(item => {
             if (item && item.url) {
-              // Mantém o item local com seu caminho relativo para Vercel
               mergedMap.set(item.url, { ...item, isLocal: true });
             }
           });
@@ -73,7 +68,6 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
         if (Array.isArray(apiList)) {
           apiList.forEach(item => {
             if (item && item.url) {
-              // Adiciona ou substitui com mídias vindas da API remota
               mergedMap.set(item.url, item);
             }
           });
@@ -97,27 +91,6 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
     loadMedia();
   }, []);
 
-  // Implementação do Infinite Scroll (Página Infinita)
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      const target = entries[0];
-      if (target.isIntersecting && displayedCount < allItems.length) {
-        setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, allItems.length));
-      }
-    }, {
-      rootMargin: '120px', // Carrega novos itens um pouco antes para suavidade total
-    });
-
-    if (loaderRef.current) {
-      observer.observe(loaderRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [displayedCount, allItems.length]);
-
-  const displayedItems = allItems.slice(0, displayedCount);
-  const hasMore = displayedCount < allItems.length;
-
   const handleMediaOpen = (item: MediaItem) => {
     if (!isUnlocked) {
       onMediaClick();
@@ -126,82 +99,43 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
     }
   };
 
+  // Group items by category (mock categories for now based on index/type)
+  const newestItems = allItems.slice(0, 6);
+  const videosOnly = allItems.filter(i => i.type === 'video');
+  const photosOnly = allItems.filter(i => i.type === 'photo');
+
   return (
-    <>
-      <section className="w-full max-w-7xl mx-auto p-4 md:p-8" id="gallery">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 auto-rows-[300px]">
-          {displayedItems.map((item, index) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5 }}
-              onClick={() => handleMediaOpen(item)}
-              className={cn(
-                "relative overflow-hidden rounded-2xl group cursor-pointer glass border border-white/5",
-                index % 4 === 0 ? "md:col-span-2 md:row-span-2" : ""
-              )}
-            >
-              <div className="absolute inset-0 bg-muted/20 animate-pulse -z-10" />
-              
-              {item.type === 'video' ? (
-                <video 
-                  src={getMediaUrl(item.url, item.isLocal)} 
-                  muted 
-                  loop 
-                  playsInline
-                  autoPlay={false}
-                  title={item.alt || "Vídeo exclusivo Magrinha Sapeka"}
-                  aria-label={item.alt || "Vídeo exclusivo Magrinha Sapeka"}
-                  className={cn(
-                    "w-full h-full object-cover transition-transform duration-700",
-                    isUnlocked ? "group-hover:scale-105" : "blur-xl scale-110",
-                  )}
-                  onMouseOver={(e) => isUnlocked && e.currentTarget.play()}
-                  onMouseOut={(e) => isUnlocked && e.currentTarget.pause()}
-                />
-              ) : (
-                <img 
-                  src={getMediaUrl(item.url, item.isLocal)} 
-                  alt={item.alt || "Foto exclusiva Magrinha Sapeka"}
-                  loading="lazy"
-                  className={cn(
-                    "w-full h-full object-cover transition-transform duration-700",
-                    isUnlocked ? "group-hover:scale-105" : "blur-xl scale-110",
-                  )}
-                />
-              )}
+    <div className="bg-black py-12 md:-mt-32 relative z-20">
+      <div className="space-y-4">
+        <NetflixRow 
+          title="Em Alta Agora" 
+          items={newestItems} 
+          isUnlocked={isUnlocked} 
+          onMediaClick={handleMediaOpen} 
+        />
+        
+        <NetflixRow 
+          title="Vídeos Exclusivos" 
+          items={videosOnly} 
+          isUnlocked={isUnlocked} 
+          onMediaClick={handleMediaOpen} 
+        />
 
-              {!isUnlocked && (
-                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white backdrop-blur-[4px] transition-all group-hover:bg-black/60">
-                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center mb-4 text-primary group-hover:scale-110 transition-transform">
-                    <Lock size={28} />
-                  </div>
-                  <span className="font-bold tracking-wide uppercase text-sm">Desbloquear acesso</span>
-                </div>
-              )}
+        <NetflixRow 
+          title="Minha Galeria de Fotos" 
+          items={photosOnly} 
+          isUnlocked={isUnlocked} 
+          onMediaClick={handleMediaOpen} 
+        />
 
-              {isUnlocked && item.type === 'video' && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/90">
-                    <Play size={28} className="translate-x-0.5" />
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
+        <NetflixRow 
+          title="Adicionados Recentemente" 
+          items={[...allItems].reverse()} 
+          isUnlocked={isUnlocked} 
+          onMediaClick={handleMediaOpen} 
+        />
+      </div>
 
-        {/* Elemento observador do Infinite Scroll */}
-        <div ref={loaderRef} className="w-full h-20 flex items-center justify-center mt-8">
-          {hasMore && (
-            <div className="w-8 h-8 rounded-full border-t-2 border-r-2 border-primary animate-spin" />
-          )}
-        </div>
-      </section>
-
-      {/* Lightbox / Video Player Modal ampliado */}
       <AnimatePresence>
         {activeMedia && (
           <motion.div
@@ -240,6 +174,6 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
