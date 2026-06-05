@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
+import 'videojs-contrib-ads';
+import 'videojs-ima';
+import 'videojs-ima/dist/videojs.ima.css';
 
 interface VideoPlayerProps {
   src: string;
@@ -24,16 +27,17 @@ export function VideoPlayer({ src, vastTag, className }: VideoPlayerProps) {
       sources: [{ src, type: 'video/mp4' }]
     }, () => {
       console.log('Player inicializado');
+
+      if (vastTag) {
+        (player as any).ima({
+          adTagUrl: vastTag,
+        });
+        (player as any).ima.initializeAdDisplayContainer();
+        player.requestAds();
+      }
     });
 
     playerRef.current = player;
-
-    // Nota: VAST requer plugins específicos de terceiros como videojs-vast-vpaid
-    // Essa é uma implementação base para o player
-    if (vastTag) {
-      console.log('VAST tag configurada (requer plugin de terceiros):', vastTag);
-      // Aqui seria a integração com o plugin de anúncios
-    }
 
     return () => {
       if (playerRef.current) {
