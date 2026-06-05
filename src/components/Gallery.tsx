@@ -2,9 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Play, X } from 'lucide-react';
 import { cn } from '../lib/cn';
-import { getApiUrl, getMediaUrl } from '../lib/apiConfig';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 interface MediaItem {
   id: string;
@@ -31,65 +28,25 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
   const [activeMedia, setActiveMedia] = useState<{ url: string; type: string } | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Busca as mídias em tempo real pelo Firestore
+  // Busca as mídias de verdade no servidor Express
   useEffect(() => {
-    const mediaCollection = collection(db, 'media');
-    const q = query(mediaCollection, orderBy('createdAt', 'desc'));
-    
-    // Escuta em tempo real o banco de dados do Firebase
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: MediaItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        items.push({
-          id: doc.id,
-          type: data.type || 'photo',
-          url: getMediaUrl(data.url),
-          alt: data.alt || doc.id
-        });
-      });
-      
-      if (items.length > 0) {
-        setAllItems(items);
-      } else {
-        // Se a coleção estiver vazia, tenta buscar da API Express ou usa Dummy
-        fetch(getApiUrl('/api/media'))
-          .then(res => {
-            if (res.ok) return res.json();
-            throw new Error();
-          })
-          .then((data: MediaItem[]) => {
-            if (data && data.length > 0) {
-              setAllItems(data.map(item => ({ ...item, url: getMediaUrl(item.url) })));
-            } else {
-              setAllItems(DUMMY_CONTENT);
-            }
-          })
-          .catch(() => {
-            setAllItems(DUMMY_CONTENT);
-          });
-      }
-    }, (error) => {
-      console.warn("[Gallery] Falha ao conectar ao Firestore (usando fallback Express):", error);
-      // Fallback para ler do servidor Express caso apresente restrição de regras
-      fetch(getApiUrl('/api/media'))
-        .then(res => {
-          if (res.ok) return res.json();
-          throw new Error();
-        })
-        .then((data: MediaItem[]) => {
+    async function loadMedia() {
+      try {
+        const res = await fetch('/api/media');
+        if (res.ok) {
+          const data: MediaItem[] = await res.json();
           if (data && data.length > 0) {
-            setAllItems(data.map(item => ({ ...item, url: getMediaUrl(item.url) })));
+            setAllItems(data);
           } else {
             setAllItems(DUMMY_CONTENT);
           }
-        })
-        .catch(() => {
-          setAllItems(DUMMY_CONTENT);
-        });
-    });
-
-    return () => unsubscribe();
+        }
+      } catch (err) {
+        console.error("Erro ao ler mídias da API:", err);
+        setAllItems(DUMMY_CONTENT);
+      }
+    }
+    loadMedia();
   }, []);
 
   // Implementação do Infinite Scroll (Página Infinita)
