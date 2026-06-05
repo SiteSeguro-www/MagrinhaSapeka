@@ -21,6 +21,13 @@ export function Admin() {
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Estados específicos para gerenciamento da foto de perfil
+  const [profileImage, setProfileImage] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop');
+  const [profileInputUrl, setProfileInputUrl] = useState('');
+  const [profileUploading, setProfileUploading] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
+
   // Verifica o token salvo localmente no início
   useEffect(() => {
     const savedToken = localStorage.getItem('magrinha_sapeka_admin_token');
@@ -30,12 +37,28 @@ export function Admin() {
     }
   }, []);
 
-  // Busca mídias do servidor sempre que o admin for verificado
+  // Busca dados do servidor sempre que o admin for verificado
   useEffect(() => {
     if (isAuthenticated) {
       fetchMedia();
+      fetchProfileConfig();
     }
   }, [isAuthenticated]);
+
+  const fetchProfileConfig = async () => {
+    try {
+      const res = await fetch('/api/profile-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.profileImage) {
+          setProfileImage(data.profileImage);
+          setProfileInputUrl(data.profileImage);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao buscar configuração de perfil:", e);
+    }
+  };
 
   const fetchMedia = async () => {
     try {
@@ -162,6 +185,65 @@ export function Admin() {
     }
   };
 
+  const handleSaveProfileUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileStatus(null);
+    try {
+      const res = await fetch('/api/admin/profile-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ profileImage: profileInputUrl })
+      });
+
+      if (res.ok) {
+        setProfileImage(profileInputUrl);
+        setProfileStatus({ text: "Link da imagem de perfil salvo com sucesso!", type: "success" });
+      } else {
+        const err = await res.json();
+        setProfileStatus({ text: err.error || "Houve um erro ao salvar o link.", type: "error" });
+      }
+    } catch (err) {
+      setProfileStatus({ text: "Erro ao conectar com o servidor.", type: "error" });
+    }
+  };
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+
+    setProfileUploading(true);
+    setProfileStatus(null);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch('/api/admin/profile-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': token
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfileImage(data.profileImage);
+        setProfileInputUrl(data.profileImage);
+        setProfileStatus({ text: "Foto de perfil enviada e atualizada com sucesso!", type: "success" });
+      } else {
+        const err = await res.json();
+        setProfileStatus({ text: err.error || "Ocorreu um erro no upload.", type: "error" });
+      }
+    } catch (e) {
+      setProfileStatus({ text: "Erro de rede ao carregar a imagem de perfil.", type: "error" });
+    } finally {
+      setProfileUploading(false);
+    }
+  };
+
   // TELA DE LOGIN DO ADMIN
   if (!isAuthenticated) {
     return (
@@ -242,6 +324,91 @@ export function Admin() {
           <span>{statusMsg.text}</span>
         </div>
       )}
+
+      {/* SEÇÃO DE CONFIGURAÇÃO DA FOTO DE PERFIL */}
+      <div className="glass p-6 md:p-8 rounded-3xl border border-primary/10 mb-10 shadow-lg">
+        <h2 className="text-xl md:text-2xl font-black mb-1 flex items-center gap-2">
+          <span>📸</span> Editar Foto de Perfil do Topo
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Altere a imagem circular que aparece no topo da página inicial do seu site. Você pode enviar uma foto nova ou colar um link público.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+          {/* Avatar Preview & Upload */}
+          <div className="flex flex-col items-center gap-4 text-center p-4 rounded-2xl bg-background/40 border border-border/50">
+            <div className="relative">
+              <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-primary shadow-lg glass">
+                <img 
+                  src={profileImage} 
+                  alt="Pré-visualização do perfil" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {profileUploading && (
+                <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-t-transparent border-primary animate-spin" />
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <input 
+                ref={profileFileInputRef}
+                type="file" 
+                className="hidden" 
+                accept="image/*"
+                onChange={handleProfileImageUpload}
+              />
+              <button
+                type="button"
+                disabled={profileUploading}
+                onClick={() => profileFileInputRef.current?.click()}
+                className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 active:scale-95 transition-all text-center"
+              >
+                {profileUploading ? "Enviando..." : "Enviar Nova Foto"}
+              </button>
+              <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: JPG, PNG ou WEBP</p>
+            </div>
+          </div>
+
+          {/* URL Input Form */}
+          <div className="md:col-span-2 flex flex-col justify-center">
+            <form onSubmit={handleSaveProfileUrl} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="profile-url" className="text-sm font-bold ml-1">Ou cole uma URL/Link de imagem externa:</label>
+                <div className="flex gap-2">
+                  <input
+                    id="profile-url"
+                    type="url"
+                    required
+                    value={profileInputUrl}
+                    onChange={(e) => setProfileInputUrl(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-background/50 border border-border focus:border-primary outline-none text-sm"
+                    placeholder="https://exemplo.com/sua-foto.jpg"
+                  />
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-foreground text-background dark:bg-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-100 rounded-xl font-bold text-sm transition-colors active:scale-95"
+                  >
+                    Salvar Link
+                  </button>
+                </div>
+              </div>
+
+              {profileStatus && (
+                <div className={cn(
+                  "p-3 rounded-xl text-xs flex items-center gap-2",
+                  profileStatus.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                )}>
+                  {profileStatus.type === 'success' ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
+                  <span>{profileStatus.text}</span>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      </div>
 
       {/* ÁREA DE DRAG & DROP PARA UPLOAD */}
       <h2 className="text-xl font-bold mb-4">Adicionar Nova Mídia</h2>

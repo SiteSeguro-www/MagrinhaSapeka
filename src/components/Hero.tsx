@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BellRing } from 'lucide-react';
 import { cn } from '../lib/cn';
@@ -8,6 +9,25 @@ interface HeroProps {
 }
 
 export function Hero({ onActivate, isUnlocked }: HeroProps) {
+  const [profileImg, setProfileImg] = useState<string>("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop");
+
+  useEffect(() => {
+    async function loadProfileConfig() {
+      try {
+        const res = await fetch('/api/profile-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.profileImage) {
+            setProfileImg(data.profileImage);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar imagem de perfil do servidor:", err);
+      }
+    }
+    loadProfileConfig();
+  }, []);
+
   return (
     <section className="relative w-full min-h-[80vh] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
       {/* Background elegant gradient fx */}
@@ -28,9 +48,8 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
           className="relative mb-8"
         >
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative z-10 glass ring-4 ring-primary/20">
-            {/* Imagem de perfil. O src pode ser trocado pela imagem final do usuário via painel ou URL. */}
             <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop" 
+              src={profileImg} 
               alt="Magrinha Sapeka"
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
             />
