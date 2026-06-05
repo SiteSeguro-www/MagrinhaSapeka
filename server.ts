@@ -45,7 +45,8 @@ const updateMediaJson = () => {
     const mediaFiles = files
       .filter(file => {
         const ext = path.extname(file).toLowerCase();
-        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext);
+        const isFavicon = file.toLowerCase().startsWith('favicon');
+        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext) && !isFavicon;
       })
       .map(file => {
         const ext = path.extname(file).toLowerCase();
@@ -140,7 +141,8 @@ app.get("/api/media", (req, res) => {
     const mediaFiles = files
       .filter(file => {
         const ext = path.extname(file).toLowerCase();
-        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext);
+        const isFavicon = file.toLowerCase().startsWith('favicon');
+        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext) && !isFavicon;
       })
       .map(file => {
         const ext = path.extname(file).toLowerCase();

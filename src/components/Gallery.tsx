@@ -79,7 +79,10 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           });
         }
 
-        const mergedList = Array.from(mergedMap.values());
+        const mergedList = Array.from(mergedMap.values()).filter(item => {
+          const isFavicon = item.id.toLowerCase().startsWith('favicon') || item.url.toLowerCase().includes('favicon');
+          return !isFavicon;
+        });
 
         if (mergedList.length > 0) {
           setAllItems(mergedList);
