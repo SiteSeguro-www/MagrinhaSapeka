@@ -21,7 +21,7 @@ try {
       return {
         id: file,
         type: isVideo ? 'video' : 'photo',
-        url: `/media/${file}`,
+        url: `/media/${encodeURIComponent(file)}`,
         alt: file
       };
     })

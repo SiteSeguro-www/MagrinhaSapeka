@@ -53,7 +53,7 @@ const updateMediaJson = () => {
         return {
           id: file,
           type: isVideo ? 'video' : 'photo',
-          url: `/media/${file}`, // Rota estática do Express
+          url: `/media/${encodeURIComponent(file)}`, // Rota estática do Express
           alt: file
         };
       })
@@ -148,7 +148,7 @@ app.get("/api/media", (req, res) => {
         return {
           id: file,
           type: isVideo ? 'video' : 'photo',
-          url: `/media/${file}`, // Rota estática do Express
+          url: `/media/${encodeURIComponent(file)}`, // Rota estática do Express
           alt: file
         };
       })
