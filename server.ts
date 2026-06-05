@@ -244,7 +244,7 @@ app.delete("/api/admin/delete", requireAdmin, (req, res) => {
 app.get("/api/profile-config", (req, res) => {
   const configPath = path.join(MEDIA_DIR, 'profile_config.json');
   const defaultPreset = {
-    profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"
+    profileImage: "/media/favicon.jpg"
   };
 
   try {
