@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "MediaItem": {
+      "title": "Media Item",
+      "description": "Metadata for an uploaded photo or video",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique filename ID of the file" },
+        "type": { "type": "string", "enum": ["photo", "video"], "description": "Type of media" },
+        "url": { "type": "string", "description": "The path/URL to the media asset" },
+        "alt": { "type": "string", "description": "Description of the media" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" }
+      },
+      "required": ["id", "type", "url", "alt", "createdAt"]
+    },
+    "ProfileConfig": {
+      "title": "Profile Configuration",
+      "description": "Global settings such as profile banner image URL",
+      "type": "object",
+      "properties": {
+        "profileImage": { "type": "string", "description": "The URL of the profile avatar image" }
+      },
+      "required": ["profileImage"]
+    }
+  },
+  "firestore": {
+    "media/{mediaId}": {
+      "schema": "MediaItem",
+      "description": "Collection of gallery media photos and videos"
+    },
+    "configs/{configId}": {
+      "schema": "ProfileConfig",
+      "description": "App configuration document, e.g. profile banner settings"
+    }
+  }
+}

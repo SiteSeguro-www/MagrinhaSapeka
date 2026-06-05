@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { BellRing } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { getApiUrl, getMediaUrl } from '../lib/apiConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface HeroProps {
   onActivate: () => void;
@@ -13,20 +15,43 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
   const [profileImg, setProfileImg] = useState<string>("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop");
 
   useEffect(() => {
-    async function loadProfileConfig() {
-      try {
-        const res = await fetch(getApiUrl('/api/profile-config'));
-        if (res.ok) {
-          const data = await res.json();
+    // Escuta alterações na configuração de perfil no Firestore em tempo real
+    const profileDocRef = doc(db, 'configs', 'profile');
+    const unsubscribe = onSnapshot(profileDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.profileImage) {
+          setProfileImg(getMediaUrl(data.profileImage));
+        }
+      } else {
+        // Fallback para API do Express local caso o documento ainda não exista no Firestore
+        fetch(getApiUrl('/api/profile-config'))
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.profileImage) {
+              setProfileImg(getMediaUrl(data.profileImage));
+            }
+          })
+          .catch(err => {
+            console.error("[Hero] Erro ao buscar configuração de perfil via API:", err);
+          });
+      }
+    }, (error) => {
+      console.warn("[Hero] Falha ao ler Firestore (usando fallback de API local):", error);
+      // Fallback para API do Express local caso falhe a permissão
+      fetch(getApiUrl('/api/profile-config'))
+        .then(res => res.json())
+        .then(data => {
           if (data && data.profileImage) {
             setProfileImg(getMediaUrl(data.profileImage));
           }
-        }
-      } catch (err) {
-        console.error("Erro ao carregar imagem de perfil do servidor:", err);
-      }
-    }
-    loadProfileConfig();
+        })
+        .catch(err => {
+          console.error("[Hero] Erro ao buscar configuração de perfil via API (fallback):", err);
+        });
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (

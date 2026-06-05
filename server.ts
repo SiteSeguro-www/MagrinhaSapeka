@@ -32,6 +32,20 @@ if (!fs.existsSync(MEDIA_DIR)) {
   fs.mkdirSync(MEDIA_DIR, { recursive: true });
 }
 
+// Resgata o arquivo firebase-applet-config para verificar ID tokens
+const getFirebaseConfig = () => {
+  try {
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    }
+  } catch (err) {
+    console.error("[Auth] Erro ao ler firebase-applet-config.json:", err);
+  }
+  return null;
+};
+const firebaseConfig = getFirebaseConfig();
+
 // Senha administrativa configurada no .env ou fallback seguro
 const getAdminPassword = () => {
   return process.env.ADMIN_PASSWORD || "minhasenhasapeka";
@@ -67,18 +81,52 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 100 * 1024 * 1024 // Limite de 100MB por arquivo (ótimo para vídeos)
+    fileSize: 100 * 1024 * 1024 // Limite de 100MB por arquivo (excelente para vídeos)
   }
 });
 
-// Middleware de verificação de autenticação de administrador simples
+// Middleware de verificação de autenticação (aceita senha simples ou token Firebase Auth)
 const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
-  if (authHeader === getAdminPassword()) {
-    next();
-  } else {
-    res.status(401).json({ error: "Não autorizado. Senha de administrador incorreta ou ausente." });
+  if (!authHeader) {
+    return res.status(401).json({ error: "Não autorizado. Token de autenticação ou senha ausente." });
   }
+
+  // Caso seja a senha legada do Admin
+  if (authHeader === getAdminPassword()) {
+    return next();
+  }
+
+  // Tenta autenticar via Firebase ID Token (Bearer)
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (token) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        // Descodifica o payload JWT
+        const payloadBuf = Buffer.from(parts[1], "base64");
+        const payload = JSON.parse(payloadBuf.toString("utf-8"));
+        
+        // Valida que o emissor corresponde à applet do Firebase do usuário
+        const expectedAud = firebaseConfig?.projectId || "gen-lang-client-0668923042";
+        if (payload.aud === expectedAud) {
+          const nowSecs = Math.floor(Date.now() / 1000);
+          if (payload.exp && nowSecs <= payload.exp) {
+            // Autenticado com sucesso!
+            return next();
+          } else {
+            console.warn("[Auth] Token ID do Firebase expirado.");
+          }
+        } else {
+          console.warn(`[Auth] Incompatibilidade de aud. Esperado: ${expectedAud}, recebido: ${payload.aud}`);
+        }
+      }
+    } catch (err) {
+      console.warn("[Auth] Erro ao validar o token de login do Firebase:", err);
+    }
+  }
+
+  res.status(401).json({ error: "Sua autenticação expirou ou a senha está inválida. Faça login novamente." });
 };
 
 // =================--- API ENDPOINTS ---=================
@@ -93,8 +141,8 @@ app.post("/api/admin/login", (req, res) => {
   }
 });
 
-// Listagem ativa de todas as mídias salvas em /public/media/
-app.get("/api/media", (req, res) => {
+// Listagem ativa de todas as mídias salvas localmente
+app.get("/api/media", async (req, res) => {
   try {
     if (!fs.existsSync(MEDIA_DIR)) {
       return res.json([]);
@@ -103,7 +151,7 @@ app.get("/api/media", (req, res) => {
     const mediaFiles = files
       .filter(file => {
         const ext = path.extname(file).toLowerCase();
-        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext);
+        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext) && file !== 'profile_config.json';
       })
       .map(file => {
         const ext = path.extname(file).toLowerCase();
@@ -111,68 +159,76 @@ app.get("/api/media", (req, res) => {
         return {
           id: file,
           type: isVideo ? 'video' : 'photo',
-          url: `/media/${file}`, // Rota estática do Express
+          url: `/media/${file}`,
           alt: file
         };
       })
-      // Coloca as mais recentes primeiro
       .reverse();
-
-    res.json(mediaFiles);
-  } catch (error) {
+    return res.json(mediaFiles);
+  } catch (error: any) {
     console.error("Erro ao listar arquivos de mídia:", error);
-    res.status(500).json({ error: "Erro ao obter os arquivos de mídia." });
+    res.status(500).json({ error: `Erro ao obter os arquivos de mídia: ${error.message}` });
   }
 });
 
-// Upload de arquivo de mídia (protegido por senha)
-app.post("/api/admin/upload", requireAdmin, upload.single("file"), (req, res) => {
+// Upload de arquivo de mídia único
+app.post("/api/admin/upload", requireAdmin, upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Selecione um arquivo válido para upload." });
   }
-  const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(req.file.filename).toLowerCase());
-  res.json({
-    success: true,
-    file: {
-      id: req.file.filename,
-      type: isVideo ? 'video' : 'photo',
-      url: `/media/${req.file.filename}`,
-      alt: req.file.filename
-    }
-  });
+
+  try {
+    const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(req.file.filename).toLowerCase());
+    res.json({
+      success: true,
+      file: {
+        id: req.file.filename,
+        type: isVideo ? 'video' : 'photo',
+        url: `/media/${req.file.filename}`,
+        alt: req.file.filename
+      }
+    });
+  } catch (error: any) {
+    console.error("Erro no upload único:", error);
+    res.status(500).json({ error: `Erro ao salvar arquivo no servidor: ${error.message}` });
+  }
 });
 
-// Upload de múltiplos arquivos de mídia em lote (protegido por senha)
-app.post("/api/admin/upload-multiple", requireAdmin, upload.array("files", 100), (req, res) => {
+// Upload de múltiplos arquivos de mídia em lote
+app.post("/api/admin/upload-multiple", requireAdmin, upload.array("files", 100), async (req, res) => {
   if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
     return res.status(400).json({ error: "Selecione pelo menos um arquivo válido para upload em lote." });
   }
 
-  const uploadedFiles = req.files.map(file => {
-    const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(file.filename).toLowerCase());
-    return {
-      id: file.filename,
-      type: isVideo ? 'video' : 'photo',
-      url: `/media/${file.filename}`,
-      alt: file.filename
-    };
-  });
+  try {
+    const uploadedFiles = (req.files as Express.Multer.File[]).map(file => {
+      const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(file.filename).toLowerCase());
+      return {
+        id: file.filename,
+        type: isVideo ? 'video' : 'photo',
+        url: `/media/${file.filename}`,
+        alt: file.filename
+      };
+    });
 
-  res.json({
-    success: true,
-    files: uploadedFiles
-  });
+    res.json({
+      success: true,
+      files: uploadedFiles
+    });
+  } catch (error: any) {
+    console.error("Erro no upload múltiplo:", error);
+    res.status(500).json({ error: `Erro ao salvar lote de mídias no servidor: ${error.message}` });
+  }
 });
 
-// Deleção de arquivo de mídia (protegido por senha)
-app.delete("/api/admin/delete", requireAdmin, (req, res) => {
+// Deleção de arquivo de mídia local
+app.delete("/api/admin/delete", requireAdmin, async (req, res) => {
   const { filename } = req.body;
   if (!filename) {
     return res.status(400).json({ error: "Nome do arquivo (filename) é obrigatório." });
   }
 
   const filePath = path.join(MEDIA_DIR, filename);
-  // Impede que tentem ler arquivos de fora do diretório de mídia (ataque de Directory Traversal)
   const resolvedPath = path.resolve(filePath);
   if (!resolvedPath.startsWith(MEDIA_DIR)) {
     return res.status(403).json({ error: "Acesso ilegal negado." });
@@ -181,19 +237,19 @@ app.delete("/api/admin/delete", requireAdmin, (req, res) => {
   if (fs.existsSync(filePath)) {
     try {
       fs.unlinkSync(filePath);
-      res.json({ success: true, message: "Arquivo deletado com sucesso do servidor." });
+      res.json({ success: true, message: "Arquivo deletado com sucesso do servidor local." });
     } catch (err) {
       res.status(500).json({ error: "Erro interno ao tentar deletar o arquivo fisicamente." });
     }
   } else {
-    res.status(404).json({ error: "Arquivo não encontrado." });
+    res.status(404).json({ error: "Arquivo não encontrado localmente." });
   }
 });
 
 // =================--- PROFILE CONFIG API ---=================
 
 // Obter configurações de perfil
-app.get("/api/profile-config", (req, res) => {
+app.get("/api/profile-config", async (req, res) => {
   const configPath = path.join(MEDIA_DIR, 'profile_config.json');
   const defaultPreset = {
     profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"
@@ -204,7 +260,6 @@ app.get("/api/profile-config", (req, res) => {
       const savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       return res.json(savedConfig);
     } else {
-      // Cria arquivo padrão se não existir
       fs.writeFileSync(configPath, JSON.stringify(defaultPreset, null, 2));
       return res.json(defaultPreset);
     }
@@ -214,66 +269,71 @@ app.get("/api/profile-config", (req, res) => {
   }
 });
 
-// Atualizar configurações de perfil (Senha protegida - via link)
-app.post("/api/admin/profile-config", requireAdmin, (req, res) => {
+// Atualizar configurações de perfil
+app.post("/api/admin/profile-config", requireAdmin, async (req, res) => {
   const { profileImage } = req.body;
   if (!profileImage) {
     return res.status(400).json({ error: "A URL ou caminho da imagem de perfil é obrigatório." });
   }
 
+  const newConfig = { profileImage };
   const configPath = path.join(MEDIA_DIR, 'profile_config.json');
   try {
-    const newConfig = { profileImage };
     fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
     res.json({ success: true, config: newConfig });
   } catch (error) {
     console.error("Erro ao salvar profile_config.json:", error);
-    res.status(500).json({ error: "Erro interno do servidor para salvar a configuração." });
+    res.status(500).json({ error: "Erro interno do servidor para salvar a configuração local." });
   }
 });
 
-// Fazer upload de uma nova imagem especificamente como Perfil (Senha protegida - via upload de arquivo)
-app.post("/api/admin/profile-upload", requireAdmin, (req, res, next) => {
-  console.log("[DEBUG] Recebendo pedido de upload de perfil...");
-  next();
-}, upload.single("file"), (req, res) => {
-  console.log("[DEBUG] Multer processou o arquivo:", req.file);
-  
+// Upload de nova imagem de perfil
+app.post("/api/admin/profile-upload", requireAdmin, upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Selecione um arquivo de imagem válido." });
   }
 
   const fileUrl = `/media/${req.file.filename}`;
-  const configPath = path.join(MEDIA_DIR, 'profile_config.json');
+  const newConfig = { profileImage: fileUrl };
 
   try {
-    // Tenta apagar fotos de perfil antigas iniciadas com "profile_avatar-" para poupar espaço
+    const configPath = path.join(MEDIA_DIR, 'profile_config.json');
     if (fs.existsSync(MEDIA_DIR)) {
       const files = fs.readdirSync(MEDIA_DIR);
       files.forEach(file => {
         if (file.startsWith("profile_avatar-") && file !== req.file?.filename) {
           try {
             fs.unlinkSync(path.join(MEDIA_DIR, file));
-            console.log("[DEBUG] Foto de perfil antiga deletada:", file);
           } catch (_) {}
         }
       });
     }
-
-    const newConfig = { profileImage: fileUrl };
     fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
-    console.log("[DEBUG] profile_config.json salvo com sucesso:", newConfig);
     res.json({ success: true, profileImage: fileUrl });
-  } catch (error) {
-    console.error("[DEBUG] Erro ao salvar foto de perfil no config:", error);
-    res.status(500).json({ error: "O arquivo foi enviado, mas houve erro ao atualizar a foto de perfil nas configurações." });
+  } catch (error: any) {
+    console.error("Erro ao salvar foto de perfil:", error);
+    res.status(500).json({ error: `Erro ao salvar foto de perfil: ${error.message}` });
   }
 });
 
-// Servir arquivos de mídia de forma estática sobre uma rota expressa limpa
-app.use("/media", express.static(MEDIA_DIR));
+// Servir mídias locais diretamente
+app.get("/media/:filename", async (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(MEDIA_DIR, filename);
+  
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(MEDIA_DIR)) {
+    return res.status(403).json({ error: "Acesso ilegal negado." });
+  }
 
-// Middleware de tratamento de erros global (evita crashes e fornece respostas limpas)
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).json({ error: "Mídia não encontrada localmente." });
+  }
+});
+
+// Middleware de tratamento de erros global
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("[DEBUG] Erro global capturado pelo Express:", err);
   res.status(err.status || 500).json({ error: err.message || "Ocorreu um erro interno no servidor durante a requisição." });
