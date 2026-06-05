@@ -9,7 +9,7 @@ export function Header({ theme, toggleTheme }: { theme: 'light' | 'dark', toggle
     <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-black/60 backdrop-blur-xl">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/media/favicon.png" alt="Magrinha Sapeka Logo" className="w-8 h-8 rounded-lg text-[0px]" />
+          <img src="/media/favicon.png" alt="Magrinha Sapeka Logo" className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl text-[0px] shadow-lg shadow-black/20" />
           <span className="font-bold hidden sm:inline-block text-white">Galeria Exclusiva</span>
         </div>
 
