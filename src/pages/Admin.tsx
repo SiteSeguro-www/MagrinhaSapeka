@@ -10,6 +10,7 @@ interface MediaItem {
   type: 'photo' | 'video';
   url: string;
   alt: string;
+  isLocal?: boolean;
 }
 
 export function Admin() {
@@ -64,11 +65,49 @@ export function Admin() {
 
   const fetchMedia = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/media'));
-      if (res.ok) {
-        const data = await res.json();
-        setMediaList(data);
+      let localList: MediaItem[] = [];
+      let apiList: MediaItem[] = [];
+
+      // 1. Tenta obter o catálogo local estático (Vite/Vercel)
+      try {
+        const localRes = await fetch('/media/media.json');
+        if (localRes.ok) {
+          localList = await localRes.json();
+        }
+      } catch (e) {
+        console.warn("Sem media.json estático no admin:", e);
       }
+
+      // 2. Tenta obter da API estruturada do backend (Cloud Run)
+      try {
+        const res = await fetch(getApiUrl('/api/media'));
+        if (res.ok) {
+          apiList = await res.json();
+        }
+      } catch (err) {
+        console.error("Erro ao ler mídias da API dinâmica no admin:", err);
+      }
+
+      // 3. Mescla ambas as listas removendo duplicidades baseando-se no ID ou URL
+      const mergedMap = new Map<string, MediaItem>();
+
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.url) {
+            mergedMap.set(item.url, { ...item, isLocal: true });
+          }
+        });
+      }
+
+      if (Array.isArray(apiList)) {
+        apiList.forEach(item => {
+          if (item && item.url) {
+            mergedMap.set(item.url, item);
+          }
+        });
+      }
+
+      setMediaList(Array.from(mergedMap.values()));
     } catch (e) {
       console.error("Erro ao buscar mídias no painel administrador:", e);
     }
@@ -487,24 +526,30 @@ export function Admin() {
               >
                 {item.type === 'video' ? (
                   <div className="w-full h-full relative bg-black/40 flex items-center justify-center">
-                    <video src={getMediaUrl(item.url)} muted className="w-full h-full object-cover opacity-80" />
+                    <video src={getMediaUrl(item.url, item.isLocal)} muted className="w-full h-full object-cover opacity-80" />
                     <FileVideo size={36} className="absolute text-white pointer-events-none drop-shadow-md" />
                   </div>
                 ) : (
-                  <img src={getMediaUrl(item.url)} alt={item.alt} className="w-full h-full object-cover" />
+                  <img src={getMediaUrl(item.url, item.isLocal)} alt={item.alt} className="w-full h-full object-cover" />
                 )}
 
                 {/* Info Overlay */}
                 <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4 text-white z-10">
                   <span className="text-xs truncate font-mono text-white/80">{item.alt}</span>
                   
-                  <button
-                    onClick={() => handleDelete(item.alt)}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 transition-colors text-sm font-bold mt-auto active:scale-95"
-                  >
-                    <Trash2 size={16} />
-                    <span>Excluir Mídia</span>
-                  </button>
+                  {item.isLocal ? (
+                    <div className="text-xs bg-amber-500/20 text-amber-300 p-2 rounded-xl text-center mt-auto font-semibold border border-amber-500/30">
+                      Arquivo local estático do projeto Vercel
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleDelete(item.alt)}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 transition-colors text-sm font-bold mt-auto active:scale-95"
+                    >
+                      <Trash2 size={16} />
+                      <span>Excluir Mídia</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

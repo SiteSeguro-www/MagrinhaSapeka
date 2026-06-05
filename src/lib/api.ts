@@ -21,9 +21,12 @@ export function getApiUrl(path: string): string {
  * Constrói a URL final para arquivos de mídia/assets estáticos.
  * Mantém links absolutos (ex: Unsplash) inalterados e prefixa URLs locais com a URL do servidor se necessário.
  */
-export function getMediaUrl(url: string | null | undefined): string {
+export function getMediaUrl(url: string | null | undefined, isLocal?: boolean): string {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  if (isLocal) {
     return url;
   }
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;

@@ -9,6 +9,7 @@ interface MediaItem {
   type: 'photo' | 'video';
   url: string;
   alt: string;
+  isLocal?: boolean;
 }
 
 // Fallback caso não tenha nada na pasta ainda
@@ -26,7 +27,7 @@ const ITEMS_PER_PAGE = 6;
 export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onMediaClick: () => void }) {
   const [allItems, setAllItems] = useState<MediaItem[]>(DUMMY_CONTENT);
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
-  const [activeMedia, setActiveMedia] = useState<{ url: string; type: string } | null>(null);
+  const [activeMedia, setActiveMedia] = useState<{ url: string; type: string; isLocal?: boolean } | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Busca as mídias de verdade no servidor Express
@@ -63,7 +64,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           localList.forEach(item => {
             if (item && item.url) {
               // Mantém o item local com seu caminho relativo para Vercel
-              mergedMap.set(item.url, item);
+              mergedMap.set(item.url, { ...item, isLocal: true });
             }
           });
         }
@@ -117,7 +118,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
     if (!isUnlocked) {
       onMediaClick();
     } else {
-      setActiveMedia({ url: item.url, type: item.type });
+      setActiveMedia({ url: item.url, type: item.type, isLocal: item.isLocal });
     }
   };
 
@@ -142,7 +143,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               
               {item.type === 'video' ? (
                 <video 
-                  src={getMediaUrl(item.url)} 
+                  src={getMediaUrl(item.url, item.isLocal)} 
                   muted 
                   loop 
                   playsInline
@@ -156,7 +157,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
                 />
               ) : (
                 <img 
-                  src={getMediaUrl(item.url)} 
+                  src={getMediaUrl(item.url, item.isLocal)} 
                   alt={item.alt}
                   loading="lazy"
                   className={cn(
@@ -219,7 +220,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
             >
               {activeMedia.type === 'video' ? (
                 <video 
-                  src={getMediaUrl(activeMedia.url)} 
+                  src={getMediaUrl(activeMedia.url, activeMedia.isLocal)} 
                   controls 
                   autoPlay 
                   playsInline
@@ -227,7 +228,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
                 />
               ) : (
                 <img 
-                  src={getMediaUrl(activeMedia.url)} 
+                  src={getMediaUrl(activeMedia.url, activeMedia.isLocal)} 
                   alt="Expanded view" 
                   className="max-w-full max-h-[90vh] object-contain"
                 />

@@ -11,10 +11,12 @@ interface HeroProps {
 
 export function Hero({ onActivate, isUnlocked }: HeroProps) {
   const [profileImg, setProfileImg] = useState<string>("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop");
+  const [isProfileImgLocal, setIsProfileImgLocal] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadProfileConfig() {
       let profile_url = '';
+      let is_url_local = false;
 
       // 1. Tenta carregar do json estático local (Vite/Vercel)
       try {
@@ -23,6 +25,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
           const localData = await localRes.json();
           if (localData && localData.profileImage) {
             profile_url = localData.profileImage;
+            is_url_local = true;
           }
         }
       } catch (e) {
@@ -36,6 +39,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
           const data = await res.json();
           if (data && data.profileImage) {
             profile_url = data.profileImage;
+            is_url_local = false;
           }
         }
       } catch (err) {
@@ -44,6 +48,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
 
       if (profile_url) {
         setProfileImg(profile_url);
+        setIsProfileImgLocal(is_url_local);
       }
     }
     loadProfileConfig();
@@ -70,7 +75,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
         >
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative z-10 glass ring-4 ring-primary/20">
             <img 
-              src={getMediaUrl(profileImg)} 
+              src={getMediaUrl(profileImg, isProfileImgLocal)} 
               alt="Magrinha Sapeka"
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
             />
