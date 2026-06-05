@@ -149,6 +149,8 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
                   loop 
                   playsInline
                   autoPlay={false}
+                  title={item.alt || "Vídeo exclusivo Magrinha Sapeka"}
+                  aria-label={item.alt || "Vídeo exclusivo Magrinha Sapeka"}
                   className={cn(
                     "w-full h-full object-cover transition-transform duration-700",
                     isUnlocked ? "group-hover:scale-105" : "blur-xl scale-110",
@@ -159,7 +161,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               ) : (
                 <img 
                   src={getMediaUrl(item.url, item.isLocal)} 
-                  alt={item.alt}
+                  alt={item.alt || "Foto exclusiva Magrinha Sapeka"}
                   loading="lazy"
                   className={cn(
                     "w-full h-full object-cover transition-transform duration-700",

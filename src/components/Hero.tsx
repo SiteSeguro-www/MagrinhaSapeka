@@ -76,7 +76,8 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative z-10 glass ring-4 ring-primary/20">
             <img 
               src={getMediaUrl(profileImg, isProfileImgLocal)} 
-              alt="Magrinha Sapeka"
+              alt="Magrinha Sapeka - Perfil Oficial"
+              title="Magrinha Sapeka Oficial"
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
             />
           </div>
