@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Trash2, LogOut, CheckCircle, AlertCircle, FileVideo, FileImage, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { getApiUrl, getMediaUrl } from '../lib/api';
 
 interface MediaItem {
   id: string;
@@ -48,7 +49,7 @@ export function Admin() {
 
   const fetchProfileConfig = async () => {
     try {
-      const res = await fetch('/api/profile-config');
+      const res = await fetch(getApiUrl('/api/profile-config'));
       if (res.ok) {
         const data = await res.json();
         if (data && data.profileImage) {
@@ -63,7 +64,7 @@ export function Admin() {
 
   const fetchMedia = async () => {
     try {
-      const res = await fetch('/api/media');
+      const res = await fetch(getApiUrl('/api/media'));
       if (res.ok) {
         const data = await res.json();
         setMediaList(data);
@@ -76,7 +77,7 @@ export function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -143,7 +144,7 @@ export function Admin() {
     });
 
     try {
-      const res = await fetch('/api/admin/upload-multiple', {
+      const res = await fetch(getApiUrl('/api/admin/upload-multiple'), {
         method: 'POST',
         headers: {
           'Authorization': token
@@ -171,7 +172,7 @@ export function Admin() {
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch('/api/admin/delete', {
+      const res = await fetch(getApiUrl('/api/admin/delete'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +197,7 @@ export function Admin() {
     e.preventDefault();
     setProfileStatus(null);
     try {
-      const res = await fetch('/api/admin/profile-config', {
+      const res = await fetch(getApiUrl('/api/admin/profile-config'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +228,7 @@ export function Admin() {
     formData.append("file", file);
 
     try {
-      const res = await fetch('/api/admin/profile-upload', {
+      const res = await fetch(getApiUrl('/api/admin/profile-upload'), {
         method: 'POST',
         headers: {
           'Authorization': token
@@ -347,7 +348,7 @@ export function Admin() {
             <div className="relative">
               <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-primary shadow-lg glass">
                 <img 
-                  src={profileImage} 
+                  src={getMediaUrl(profileImage)} 
                   alt="Pré-visualização do perfil" 
                   className="w-full h-full object-cover"
                 />
@@ -486,11 +487,11 @@ export function Admin() {
               >
                 {item.type === 'video' ? (
                   <div className="w-full h-full relative bg-black/40 flex items-center justify-center">
-                    <video src={item.url} muted className="w-full h-full object-cover opacity-80" />
+                    <video src={getMediaUrl(item.url)} muted className="w-full h-full object-cover opacity-80" />
                     <FileVideo size={36} className="absolute text-white pointer-events-none drop-shadow-md" />
                   </div>
                 ) : (
-                  <img src={item.url} alt={item.alt} className="w-full h-full object-cover" />
+                  <img src={getMediaUrl(item.url)} alt={item.alt} className="w-full h-full object-cover" />
                 )}
 
                 {/* Info Overlay */}

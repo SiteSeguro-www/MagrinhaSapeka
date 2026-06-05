@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Play, X } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { getApiUrl, getMediaUrl } from '../lib/api';
 
 interface MediaItem {
   id: string;
@@ -32,7 +33,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
   useEffect(() => {
     async function loadMedia() {
       try {
-        const res = await fetch('/api/media');
+        const res = await fetch(getApiUrl('/api/media'));
         if (res.ok) {
           const data: MediaItem[] = await res.json();
           if (data && data.length > 0) {
@@ -99,7 +100,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               
               {item.type === 'video' ? (
                 <video 
-                  src={item.url} 
+                  src={getMediaUrl(item.url)} 
                   muted 
                   loop 
                   playsInline
@@ -113,7 +114,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
                 />
               ) : (
                 <img 
-                  src={item.url} 
+                  src={getMediaUrl(item.url)} 
                   alt={item.alt}
                   loading="lazy"
                   className={cn(
@@ -176,7 +177,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
             >
               {activeMedia.type === 'video' ? (
                 <video 
-                  src={activeMedia.url} 
+                  src={getMediaUrl(activeMedia.url)} 
                   controls 
                   autoPlay 
                   playsInline
@@ -184,7 +185,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
                 />
               ) : (
                 <img 
-                  src={activeMedia.url} 
+                  src={getMediaUrl(activeMedia.url)} 
                   alt="Expanded view" 
                   className="max-w-full max-h-[90vh] object-contain"
                 />

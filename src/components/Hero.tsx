@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BellRing } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { getApiUrl, getMediaUrl } from '../lib/api';
 
 interface HeroProps {
   onActivate: () => void;
@@ -14,7 +15,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
   useEffect(() => {
     async function loadProfileConfig() {
       try {
-        const res = await fetch('/api/profile-config');
+        const res = await fetch(getApiUrl('/api/profile-config'));
         if (res.ok) {
           const data = await res.json();
           if (data && data.profileImage) {
@@ -49,7 +50,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
         >
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-2xl relative z-10 glass ring-4 ring-primary/20">
             <img 
-              src={profileImg} 
+              src={getMediaUrl(profileImg)} 
               alt="Magrinha Sapeka"
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
             />

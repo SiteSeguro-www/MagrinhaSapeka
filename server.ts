@@ -11,6 +11,22 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// Middleware para habilitar CORS (Cross-Origin Resource Sharing) de forma flexível para a Vercel e outras origens
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  // Permite qualquer origem ou reflete a origem da requisição para facilitar a integração com a Vercel
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Configuração de parseamento de JSON
 app.use(express.json());
 
