@@ -11,6 +11,7 @@ export function Footer() {
           <Link to="/sobre" className="hover:text-primary transition-colors">Sobre Nós</Link>
           <Link to="/contato" className="hover:text-primary transition-colors">Contato</Link>
           <Link to="/faq" className="hover:text-primary transition-colors">Dúvidas (FAQ)</Link>
+          <Link to="/admin" className="hover:text-primary transition-colors text-xs opacity-60">Painel Admin</Link>
         </div>
         <p>&copy; {new Date().getFullYear()} Magrinha Sapeka. Todos os direitos reservados.</p>
       </div>

@@ -3,22 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Play, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 
-// Lê automaticamente todos os arquivos da pasta /public/media/
-const dynamicMediaFiles = import.meta.glob('/public/media/*.{jpg,jpeg,png,webp,mp4,webm,mov}', { eager: true });
-
-const UPLOADED_MEDIA = Object.keys(dynamicMediaFiles).map((path, index) => {
-  const filename = path.split('/').pop()!;
-  const isVideo = /\.(mp4|webm|mov)$/i.test(filename);
-  return {
-    id: `uploaded-${index}`,
-    type: isVideo ? 'video' : 'photo',
-    url: `/media/${filename}`,
-    alt: filename
-  };
-});
+interface MediaItem {
+  id: string;
+  type: 'photo' | 'video';
+  url: string;
+  alt: string;
+}
 
 // Fallback caso não tenha nada na pasta ainda
-const DUMMY_CONTENT = [
+const DUMMY_CONTENT: MediaItem[] = [
   { id: '1', type: 'photo', url: 'https://images.unsplash.com/photo-1518104593124-ac2e69bb0665?q=80&w=800&auto=format&fit=crop', alt: 'Portrait 1' },
   { id: '2', type: 'photo', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop', alt: 'Portrait 2' },
   { id: '3', type: 'video', url: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?q=80&w=800&auto=format&fit=crop', alt: 'Video thumbnail 1' },
@@ -28,23 +21,43 @@ const DUMMY_CONTENT = [
 ];
 
 const ITEMS_PER_PAGE = 6;
-// Usa os arquivos da pasta se existirem, senão usa os falsos de exemplo
-const ALL_ITEMS = UPLOADED_MEDIA.length > 0 ? UPLOADED_MEDIA : DUMMY_CONTENT;
 
 export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onMediaClick: () => void }) {
+  const [allItems, setAllItems] = useState<MediaItem[]>(DUMMY_CONTENT);
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
+  const [activeMedia, setActiveMedia] = useState<{ url: string; type: string } | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
-  const [activeMedia, setActiveMedia] = useState<{url: string, type: string} | null>(null);
 
-  // Implementação correta do Infinite Scroll (Página Infinita)
+  // Busca as mídias de verdade no servidor Express
+  useEffect(() => {
+    async function loadMedia() {
+      try {
+        const res = await fetch('/api/media');
+        if (res.ok) {
+          const data: MediaItem[] = await res.json();
+          if (data && data.length > 0) {
+            setAllItems(data);
+          } else {
+            setAllItems(DUMMY_CONTENT);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao ler mídias da API:", err);
+        setAllItems(DUMMY_CONTENT);
+      }
+    }
+    loadMedia();
+  }, []);
+
+  // Implementação do Infinite Scroll (Página Infinita)
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       const target = entries[0];
-      if (target.isIntersecting && displayedCount < ALL_ITEMS.length) {
-        setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, ALL_ITEMS.length));
+      if (target.isIntersecting && displayedCount < allItems.length) {
+        setDisplayedCount(prev => Math.min(prev + ITEMS_PER_PAGE, allItems.length));
       }
     }, {
-      rootMargin: '100px', // Carrega um pouco antes de chegar no fim
+      rootMargin: '120px', // Carrega novos itens um pouco antes para suavidade total
     });
 
     if (loaderRef.current) {
@@ -52,12 +65,12 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
     }
 
     return () => observer.disconnect();
-  }, [displayedCount]);
+  }, [displayedCount, allItems.length]);
 
-  const displayedItems = ALL_ITEMS.slice(0, displayedCount);
-  const hasMore = displayedCount < ALL_ITEMS.length;
+  const displayedItems = allItems.slice(0, displayedCount);
+  const hasMore = displayedCount < allItems.length;
 
-  const handleMediaOpen = (item: typeof ALL_ITEMS[0]) => {
+  const handleMediaOpen = (item: MediaItem) => {
     if (!isUnlocked) {
       onMediaClick();
     } else {
@@ -130,7 +143,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
           ))}
         </div>
 
-        {/* Loader do Infinite Scroll */}
+        {/* Elemento observador do Infinite Scroll */}
         <div ref={loaderRef} className="w-full h-20 flex items-center justify-center mt-8">
           {hasMore && (
             <div className="w-8 h-8 rounded-full border-t-2 border-r-2 border-primary animate-spin" />
@@ -138,7 +151,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
         </div>
       </section>
 
-      {/* Lightbox / Video Player Modal */}
+      {/* Lightbox / Video Player Modal ampliado */}
       <AnimatePresence>
         {activeMedia && (
           <motion.div
@@ -146,7 +159,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setActiveMedia(null)}
-            className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
           >
             <button 
               className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors z-[210]"

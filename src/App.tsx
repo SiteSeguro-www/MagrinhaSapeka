@@ -13,6 +13,7 @@ import { Privacy } from './pages/Privacy';
 import { About } from './pages/About';
 import { Contact } from './pages/Contact';
 import { FAQ } from './pages/FAQ';
+import { Admin } from './pages/Admin';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/sobre" element={<About />} />
           <Route path="/contato" element={<Contact />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
 
