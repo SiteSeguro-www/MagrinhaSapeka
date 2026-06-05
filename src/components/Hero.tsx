@@ -14,16 +14,36 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
 
   useEffect(() => {
     async function loadProfileConfig() {
+      let profile_url = '';
+
+      // 1. Tenta carregar do json estático local (Vite/Vercel)
+      try {
+        const localRes = await fetch('/media/profile_config.json');
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          if (localData && localData.profileImage) {
+            profile_url = localData.profileImage;
+          }
+        }
+      } catch (e) {
+        console.warn("Sem profile_config.json estático:", e);
+      }
+
+      // 2. Tenta carregar do backend (Cloud Run) e sobrescreve se houver rede/sucesso
       try {
         const res = await fetch(getApiUrl('/api/profile-config'));
         if (res.ok) {
           const data = await res.json();
           if (data && data.profileImage) {
-            setProfileImg(data.profileImage);
+            profile_url = data.profileImage;
           }
         }
       } catch (err) {
         console.error("Erro ao carregar imagem de perfil do servidor:", err);
+      }
+
+      if (profile_url) {
+        setProfileImg(profile_url);
       }
     }
     loadProfileConfig();

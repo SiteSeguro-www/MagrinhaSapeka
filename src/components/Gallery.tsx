@@ -33,17 +33,59 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
   useEffect(() => {
     async function loadMedia() {
       try {
-        const res = await fetch(getApiUrl('/api/media'));
-        if (res.ok) {
-          const data: MediaItem[] = await res.json();
-          if (data && data.length > 0) {
-            setAllItems(data);
-          } else {
-            setAllItems(DUMMY_CONTENT);
+        let localList: MediaItem[] = [];
+        let apiList: MediaItem[] = [];
+
+        // 1. Tenta obter o catálogo local estático (Vite/Vercel)
+        try {
+          const localRes = await fetch('/media/media.json');
+          if (localRes.ok) {
+            localList = await localRes.json();
           }
+        } catch (e) {
+          console.warn("Sem media.json estático:", e);
+        }
+
+        // 2. Tenta obter da API estruturada do backend (Cloud Run)
+        try {
+          const res = await fetch(getApiUrl('/api/media'));
+          if (res.ok) {
+            apiList = await res.json();
+          }
+        } catch (err) {
+          console.error("Erro ao ler mídias da API dinâmica:", err);
+        }
+
+        // 3. Mescla ambas as listas removendo duplicidades baseando-se no ID ou URL
+        const mergedMap = new Map<string, MediaItem>();
+
+        if (Array.isArray(localList)) {
+          localList.forEach(item => {
+            if (item && item.url) {
+              // Mantém o item local com seu caminho relativo para Vercel
+              mergedMap.set(item.url, item);
+            }
+          });
+        }
+
+        if (Array.isArray(apiList)) {
+          apiList.forEach(item => {
+            if (item && item.url) {
+              // Adiciona ou substitui com mídias vindas da API remota
+              mergedMap.set(item.url, item);
+            }
+          });
+        }
+
+        const mergedList = Array.from(mergedMap.values());
+
+        if (mergedList.length > 0) {
+          setAllItems(mergedList);
+        } else {
+          setAllItems(DUMMY_CONTENT);
         }
       } catch (err) {
-        console.error("Erro ao ler mídias da API:", err);
+        console.error("Erro geral recuperando mídias:", err);
         setAllItems(DUMMY_CONTENT);
       }
     }

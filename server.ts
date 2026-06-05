@@ -37,6 +37,38 @@ if (!fs.existsSync(MEDIA_DIR)) {
   fs.mkdirSync(MEDIA_DIR, { recursive: true });
 }
 
+// Atualiza o arquivo indexador estático 'media.json' na inicialização e upload/deleção
+const updateMediaJson = () => {
+  try {
+    if (!fs.existsSync(MEDIA_DIR)) return;
+    const files = fs.readdirSync(MEDIA_DIR);
+    const mediaFiles = files
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext);
+      })
+      .map(file => {
+        const ext = path.extname(file).toLowerCase();
+        const isVideo = ['.mp4', '.webm', '.mov'].includes(ext);
+        return {
+          id: file,
+          type: isVideo ? 'video' : 'photo',
+          url: `/media/${file}`, // Rota estática do Express
+          alt: file
+        };
+      })
+      .reverse();
+
+    fs.writeFileSync(path.join(MEDIA_DIR, 'media.json'), JSON.stringify(mediaFiles, null, 2), 'utf-8');
+    console.log(`[Media Indexer] Sincronizado com sucesso! ${mediaFiles.length} arquivos catalogados.`);
+  } catch (err) {
+    console.error("[Media Indexer] Erro ao sincronizar media.json:", err);
+  }
+};
+
+// Executa na inicialização do servidor
+updateMediaJson();
+
 // Senha administrativa configurada no .env ou fallback seguro
 const getAdminPassword = () => {
   return process.env.ADMIN_PASSWORD || "minhasenhasapeka";
@@ -136,6 +168,10 @@ app.post("/api/admin/upload", requireAdmin, upload.single("file"), (req, res) =>
     return res.status(400).json({ error: "Selecione um arquivo válido para upload." });
   }
   const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(req.file.filename).toLowerCase());
+  
+  // Atualiza indexador
+  updateMediaJson();
+
   res.json({
     success: true,
     file: {
@@ -163,6 +199,9 @@ app.post("/api/admin/upload-multiple", requireAdmin, upload.array("files", 100),
     };
   });
 
+  // Atualiza indexador
+  updateMediaJson();
+
   res.json({
     success: true,
     files: uploadedFiles
@@ -186,6 +225,10 @@ app.delete("/api/admin/delete", requireAdmin, (req, res) => {
   if (fs.existsSync(filePath)) {
     try {
       fs.unlinkSync(filePath);
+      
+      // Atualiza indexador após deleção física
+      updateMediaJson();
+
       res.json({ success: true, message: "Arquivo deletado com sucesso do servidor." });
     } catch (err) {
       res.status(500).json({ error: "Erro interno ao tentar deletar o arquivo fisicamente." });
