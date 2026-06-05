@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BellRing } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { getApiUrl, getMediaUrl } from '../lib/apiConfig';
 
 interface HeroProps {
   onActivate: () => void;
@@ -14,11 +15,11 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
   useEffect(() => {
     async function loadProfileConfig() {
       try {
-        const res = await fetch('/api/profile-config');
+        const res = await fetch(getApiUrl('/api/profile-config'));
         if (res.ok) {
           const data = await res.json();
           if (data && data.profileImage) {
-            setProfileImg(data.profileImage);
+            setProfileImg(getMediaUrl(data.profileImage));
           }
         }
       } catch (err) {

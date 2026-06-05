@@ -11,6 +11,17 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// Configuração de CORS nativo para permitir acesso do site hospedado no Vercel
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Configuração de parseamento de JSON
 app.use(express.json());
 

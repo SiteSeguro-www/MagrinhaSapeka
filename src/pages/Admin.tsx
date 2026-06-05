@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Trash2, LogOut, CheckCircle, AlertCircle, FileVideo, FileImage, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { getApiUrl, getMediaUrl } from '../lib/apiConfig';
 
 interface MediaItem {
   id: string;
@@ -48,12 +49,13 @@ export function Admin() {
 
   const fetchProfileConfig = async () => {
     try {
-      const res = await fetch('/api/profile-config');
+      const res = await fetch(getApiUrl('/api/profile-config'));
       if (res.ok) {
         const data = await res.json();
         if (data && data.profileImage) {
-          setProfileImage(data.profileImage);
-          setProfileInputUrl(data.profileImage);
+          const formattedUrl = getMediaUrl(data.profileImage);
+          setProfileImage(formattedUrl);
+          setProfileInputUrl(formattedUrl);
         }
       }
     } catch (e) {
@@ -63,10 +65,14 @@ export function Admin() {
 
   const fetchMedia = async () => {
     try {
-      const res = await fetch('/api/media');
+      const res = await fetch(getApiUrl('/api/media'));
       if (res.ok) {
         const data = await res.json();
-        setMediaList(data);
+        const formattedData = data.map((item: MediaItem) => ({
+          ...item,
+          url: getMediaUrl(item.url)
+        }));
+        setMediaList(formattedData);
       }
     } catch (e) {
       console.error("Erro ao buscar mídias no painel administrador:", e);
@@ -76,7 +82,7 @@ export function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -143,7 +149,7 @@ export function Admin() {
     });
 
     try {
-      const res = await fetch('/api/admin/upload-multiple', {
+      const res = await fetch(getApiUrl('/api/admin/upload-multiple'), {
         method: 'POST',
         headers: {
           'Authorization': token
@@ -171,7 +177,7 @@ export function Admin() {
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch('/api/admin/delete', {
+      const res = await fetch(getApiUrl('/api/admin/delete'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +202,7 @@ export function Admin() {
     e.preventDefault();
     setProfileStatus(null);
     try {
-      const res = await fetch('/api/admin/profile-config', {
+      const res = await fetch(getApiUrl('/api/admin/profile-config'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +212,8 @@ export function Admin() {
       });
 
       if (res.ok) {
-        setProfileImage(profileInputUrl);
+        const formattedUrl = getMediaUrl(profileInputUrl);
+        setProfileImage(formattedUrl);
         setProfileStatus({ text: "Link da imagem de perfil salvo com sucesso!", type: "success" });
       } else {
         const err = await res.json();
@@ -227,7 +234,7 @@ export function Admin() {
     formData.append("file", file);
 
     try {
-      const res = await fetch('/api/admin/profile-upload', {
+      const res = await fetch(getApiUrl('/api/admin/profile-upload'), {
         method: 'POST',
         headers: {
           'Authorization': token
@@ -237,8 +244,9 @@ export function Admin() {
 
       if (res.ok) {
         const data = await res.json();
-        setProfileImage(data.profileImage);
-        setProfileInputUrl(data.profileImage);
+        const formattedImg = getMediaUrl(data.profileImage);
+        setProfileImage(formattedImg);
+        setProfileInputUrl(formattedImg);
         setProfileStatus({ text: "Foto de perfil enviada e atualizada com sucesso!", type: "success" });
       } else {
         const err = await res.json();

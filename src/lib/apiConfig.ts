@@ -1,0 +1,21 @@
+const isExternal = !window.location.hostname.includes("run.app") && 
+                     window.location.hostname !== "localhost" && 
+                     window.location.hostname !== "127.0.0.1";
+
+export const API_BASE_URL = isExternal 
+  ? "https://ais-pre-voop6yrtycadndon66d4j4-109493740571.us-east5.run.app" 
+  : "";
+
+export function getApiUrl(path: string): string {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${cleanPath}`;
+}
+
+export function getMediaUrl(url: string | undefined): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+  return `${API_BASE_URL}${cleanUrl}`;
+}
