@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Play, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { getApiUrl, getMediaUrl } from '../lib/api';
@@ -30,6 +30,18 @@ import { NetflixRow } from './NetflixRow';
 export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onMediaClick: () => void }) {
   const [allItems, setAllItems] = useState<MediaItem[]>(DUMMY_CONTENT);
   const [activeMedia, setActiveMedia] = useState<{ url: string; type: string; isLocal?: boolean } | null>(null);
+
+  // Disable scroll when media is active
+  useEffect(() => {
+    if (activeMedia) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeMedia]);
 
   useEffect(() => {
     async function loadMedia() {
@@ -143,20 +155,27 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setActiveMedia(null)}
-            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+            className="fixed inset-0 z-[1000000] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-4 overflow-hidden"
           >
-            <button 
-              className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors z-[210]"
-              onClick={() => setActiveMedia(null)}
-            >
-              <X size={24} />
-            </button>
+            <div className="fixed top-6 right-6 md:top-10 md:right-10 z-[1000001]">
+              <button 
+                className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all border border-white/30 active:scale-95 shadow-2xl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMedia(null);
+                }}
+                aria-label="Fechar"
+              >
+                <X size={32} />
+              </button>
+            </div>
+
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-5xl w-full max-h-[90vh] rounded-2xl overflow-hidden glass shadow-2xl flex items-center justify-center"
+              className="relative max-w-5xl w-full max-h-[80vh] md:max-h-[90vh] rounded-2xl overflow-hidden glass shadow-2xl flex items-center justify-center"
             >
               {activeMedia.type === 'video' ? (
                 <VideoPlayer 
