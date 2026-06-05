@@ -157,16 +157,16 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
             onClick={() => setActiveMedia(null)}
             className="fixed inset-0 z-[1000000] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-4 overflow-hidden"
           >
-            <div className="fixed top-6 right-6 md:top-10 md:right-10 z-[1000001]">
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000001]">
               <button 
-                className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all border border-white/30 active:scale-95 shadow-2xl"
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-all border-4 border-white active:scale-90 shadow-2xl"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveMedia(null);
                 }}
                 aria-label="Fechar"
               >
-                <X size={32} />
+                <X size={40} strokeWidth={3} />
               </button>
             </div>
 
