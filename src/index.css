@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-pink-dark: #ff3399;
+  --color-brand-pink-light: #e60073;
+  
+  --color-bg-dark: #050505;
+  --color-bg-light: #fafafa;
+  --color-surface-dark: #121212;
+  --color-surface-light: #ffffff;
+}
+
+@layer base {
+  :root {
+    --background: var(--color-bg-light);
+    --foreground: #111;
+    --surface: var(--color-surface-light);
+    --primary: var(--color-brand-pink-light);
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --border: #e4e4e7;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+  }
+
+  .dark {
+    --background: var(--color-bg-dark);
+    --foreground: #f4f4f5;
+    --surface: var(--color-surface-dark);
+    --primary: var(--color-brand-pink-dark);
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --border: #27272a;
+    --glass-bg: rgba(18, 18, 18, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.05);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+  }
+}
