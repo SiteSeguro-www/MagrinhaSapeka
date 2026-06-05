@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useNotification } from './hooks/useNotification';
 import { useTheme } from './hooks/useTheme';
-import { ThemeToggle } from './components/ThemeToggle';
+import { Header } from './components/Header';
 import { NotificationModal } from './components/NotificationModal';
+import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
 
 // Pages
@@ -56,7 +57,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
-      <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+      <Header theme={theme} toggleTheme={toggleTheme} />
       
       <main className="flex-1">
         <Routes>
@@ -77,6 +78,8 @@ export default function App() {
       </main>
 
       <Footer />
+
+      <InstallPWA />
 
       <NotificationModal 
         isOpen={modalOpen} 

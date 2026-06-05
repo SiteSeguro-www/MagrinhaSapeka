@@ -28,6 +28,17 @@
     <meta name="twitter:title" content="Magrinha Sapeka" />
     <meta name="twitter:description" content="Acompanhe os melhores conteúdos exclusivos, fotos e vídeos oficiais de Magrinha Sapeka." />
     <meta name="twitter:image" content="https://magrinha-sapeka.vercel.app/media/favicon.jpg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Reg Error:', err));
+        });
+      }
+    </script>
     <script type="application/javascript">
         pn_idzone = 5943292;
         pn_sleep_seconds = 0;
