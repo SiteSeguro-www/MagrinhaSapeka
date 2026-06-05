@@ -85,16 +85,11 @@ const upload = multer({
   }
 });
 
-// Middleware de verificação de autenticação (aceita senha simples ou token Firebase Auth)
+// Middleware de verificação de autenticação (aceita APENAS token Firebase pertencente ao administrador)
 const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return res.status(401).json({ error: "Não autorizado. Token de autenticação ou senha ausente." });
-  }
-
-  // Caso seja a senha legada do Admin
-  if (authHeader === getAdminPassword()) {
-    return next();
+    return res.status(401).json({ error: "Não autorizado. Token de autenticação ausente." });
   }
 
   // Tenta autenticar via Firebase ID Token (Bearer)
@@ -112,8 +107,16 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
         if (payload.aud === expectedAud) {
           const nowSecs = Math.floor(Date.now() / 1000);
           if (payload.exp && nowSecs <= payload.exp) {
-            // Autenticado com sucesso!
-            return next();
+            // Garante que APENAS o e-mail de administrador definido é autorizado
+            const isAdminEmail = payload.email === "dweminem@gmail.com";
+            const isEmailVerified = payload.email_verified === true;
+
+            if (isAdminEmail && isEmailVerified) {
+              // Autenticado com sucesso!
+              return next();
+            } else {
+              console.warn(`[Auth] Acesso negado para o e-mail: ${payload.email} (Verificado: ${payload.email_verified})`);
+            }
           } else {
             console.warn("[Auth] Token ID do Firebase expirado.");
           }
@@ -126,7 +129,7 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
     }
   }
 
-  res.status(401).json({ error: "Sua autenticação expirou ou a senha está inválida. Faça login novamente." });
+  res.status(401).json({ error: "Acesso administrativo negado. Faça login com o Gmail autorizado (dweminem@gmail.com)." });
 };
 
 // =================--- API ENDPOINTS ---=================

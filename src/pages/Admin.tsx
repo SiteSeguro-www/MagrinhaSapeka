@@ -11,7 +11,7 @@ import {
   signOut, 
   User 
 } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
+import { auth, db, storage } from '../lib/firebase';
 import { 
   collection, 
   doc, 
@@ -22,6 +22,7 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 interface MediaItem {
   id: string;
@@ -52,14 +53,23 @@ export function Admin() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        // Resgata o ID Token real para autenticar no backend Express
-        try {
-          const idToken = await user.getIdToken();
-          setToken(`Bearer ${idToken}`);
-        } catch (err) {
-          console.error("Erro ao obter ID Token do Firebase:", err);
+        if (user.email === 'dweminem@gmail.com') {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          // Resgata o ID Token real para autenticar no backend Express
+          try {
+            const idToken = await user.getIdToken();
+            setToken(`Bearer ${idToken}`);
+          } catch (err) {
+            console.error("Erro ao obter ID Token do Firebase:", err);
+          }
+        } else {
+          // Se o e-mail não for do admin, faz o signout imediatamente e mostra uma mensagem de erro
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+          setToken('');
+          await signOut(auth);
+          setStatusMsg({ text: "Acesso negado. Apenas o e-mail dweminem@gmail.com está autorizado a acessar este painel administrativo.", type: "error" });
         }
       } else {
         setCurrentUser(null);
@@ -159,8 +169,14 @@ export function Admin() {
     const provider = new GoogleAuthProvider();
     setStatusMsg(null);
     try {
-      await signInWithPopup(auth, provider);
-      setStatusMsg({ text: "Soma de Login Efetuada com Sucesso via Google!", type: "success" });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      if (user.email === 'dweminem@gmail.com') {
+        setStatusMsg({ text: "Super Login Efetuado com Sucesso via Google!", type: "success" });
+      } else {
+        await signOut(auth);
+        setStatusMsg({ text: "Acesso negado. Apenas o e-mail dweminem@gmail.com está autorizado a acessar este painel administrativo.", type: "error" });
+      }
     } catch (err: any) {
       console.error("Erro no login do Firebase Google:", err);
       setStatusMsg({ text: err.message || "Erro ao realizar login com o Google.", type: "error" });
@@ -204,60 +220,56 @@ export function Admin() {
     }
   };
 
-  // Faz upload físico para a pasta de mídias, e salva metadados no Firestore
+  // Faz upload de arquivos para o Firebase Storage, e salva metadados no Firestore
   const uploadFiles = async (files: File[]) => {
     setUploading(true);
     setUploadingCount(files.length);
     setStatusMsg(null);
-    const formData = new FormData();
-    
-    files.forEach(file => {
-      formData.append("files", file);
-    });
 
     try {
-      // Faz o upload físico dos arquivos para a pasta local public/media do servidor
-      const res = await fetch(getApiUrl('/api/admin/upload-multiple'), {
-        method: 'POST',
-        headers: {
-          'Authorization': token
-        },
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
+      let successCount = 0;
+      for (const file of files) {
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        const cleanName = file.name.substring(0, file.name.lastIndexOf('.'))
+          .replace(/[^a-zA-Z0-9_-]/g, "_");
+        const uniqueFilename = `${Date.now()}_${cleanName}${fileExtension}`;
         
-        // Salva os metadados das imagens enviadas diretamente no Firestore para sincronismo real instantâneo
-        if (data.files && Array.isArray(data.files)) {
-          for (const file of data.files) {
-            const cleanId = file.id.replace(/[^a-zA-Z0-9_\\-]/g, "_"); // ID sanitizado para regras do Firestore (isValidId)
-            await setDoc(doc(db, 'media', cleanId), {
-              id: file.id,
-              type: file.type,
-              url: file.url,
-              alt: file.id,
-              createdAt: serverTimestamp() // timestamp real seguro do Firebase
-            });
-          }
-        }
+        const isVideo = ['.mp4', '.webm', '.mov'].includes(fileExtension);
+        const type = isVideo ? 'video' : 'photo';
 
-        setStatusMsg({ text: `${files.length} arquivo(s) enviado(s) com sucesso em lote!`, type: "success" });
-      } else {
-        const err = await res.json();
-        setStatusMsg({ text: err.error || "Ocorreu um erro no upload em lote.", type: "error" });
+        // Cria a referência no Storage
+        const storageRef = ref(storage, `gallery/${uniqueFilename}`);
+        
+        // Faz o upload do arquivo
+        await uploadBytes(storageRef, file);
+        
+        // Obtém a URL de download pública
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        const cleanId = uniqueFilename.replace(/[^a-zA-Z0-9_\\-]/g, "_");
+        await setDoc(doc(db, 'media', cleanId), {
+          id: uniqueFilename,
+          type: type,
+          url: downloadUrl,
+          alt: file.name,
+          createdAt: serverTimestamp()
+        });
+
+        successCount++;
       }
+
+      setStatusMsg({ text: `${successCount} arquivo(s) enviado(s) com sucesso para o Firebase Storage!`, type: "success" });
     } catch (e: any) {
-      console.error("Erro no upload em lote:", e);
-      setStatusMsg({ text: "Erro ao tentar se conectar ao servidor físico de mídia.", type: "error" });
+      console.error("Erro no upload para o Firebase Storage:", e);
+      setStatusMsg({ text: `Erro ao salvar arquivos: ${e.message || e}`, type: "error" });
     } finally {
       setUploading(false);
       setUploadingCount(0);
     }
   };
 
-  // Exclusão de Mídia do Firestore e Backend físico
-  const handleDelete = async (filename: string) => {
+  // Exclusão de Mídia do Firestore e Firebase Storage
+  const handleDelete = async (filename: string, fileUrl: string) => {
     const confirmDelete = window.confirm(`Deseja realmente excluir permanentemente a mídia "${filename}"?`);
     if (!confirmDelete) return;
 
@@ -267,25 +279,32 @@ export function Admin() {
       const cleanId = filename.replace(/[^a-zA-Z0-9_\\-]/g, "_");
       await deleteDoc(doc(db, 'media', cleanId));
 
-      // 2. Faz a limpeza do arquivo físico no backend Express
-      const res = await fetch(getApiUrl('/api/admin/delete'), {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token
-        },
-        body: JSON.stringify({ filename })
-      });
-
-      if (res.ok) {
-        setStatusMsg({ text: "Mídia deletada com sucesso!", type: "success" });
+      // 2. Tenta remover o arquivo do Firebase Storage se for URL do storage
+      if (fileUrl && fileUrl.includes('firebasestorage.googleapis.com')) {
+        try {
+          const storageRef = ref(storage, `gallery/${filename}`);
+          await deleteObject(storageRef);
+        } catch (storageErr) {
+          console.warn("Falha ao remover arquivo físico do Firebase Storage:", storageErr);
+        }
       } else {
-        const err = await res.json();
-        setStatusMsg({ text: err.error || "Mídia removida do banco, mas falhou ao apagar fisicamente.", type: "error" });
+        // Fallback e arquivos locais legados
+        try {
+          await fetch(getApiUrl('/api/admin/delete'), {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token
+            },
+            body: JSON.stringify({ filename })
+          });
+        } catch (_) {}
       }
+
+      setStatusMsg({ text: "Mídia deletada com sucesso!", type: "success" });
     } catch (e: any) {
-      console.error("Erro ao deletar mídia de imagem/video:", e);
-      setStatusMsg({ text: "Erro de comunicação ao realizar exclusão.", type: "error" });
+      console.error("Erro ao deletar mídia:", e);
+      setStatusMsg({ text: "Erro ao tentar realizar a exclusão.", type: "error" });
     }
   };
 
@@ -318,44 +337,38 @@ export function Admin() {
     }
   };
 
-  // Envia foto de avatar local ao Express e atualiza sua referência no Firestore
+  // Envia foto de avatar ao Firebase Storage e atualiza sua referência no Firestore
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
 
     setProfileUploading(true);
     setProfileStatus(null);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const res = await fetch(getApiUrl('/api/admin/profile-upload'), {
-        method: 'POST',
-        headers: {
-          'Authorization': token
-        },
-        body: formData
+      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      const uniqueFilename = `profile_${Date.now()}${fileExtension}`;
+
+      // Cria referência no Storage para a foto de perfil
+      const storageRef = ref(storage, `profiles/${uniqueFilename}`);
+      
+      // Upload do arquivo
+      await uploadBytes(storageRef, file);
+      
+      // Obtém a URL pública do avatar
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // Atualiza a URL do Perfil do Topo no Google Firestore
+      await setDoc(doc(db, 'configs', 'profile'), {
+        profileImage: downloadUrl
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const formattedImg = getMediaUrl(data.profileImage);
-
-        // Atualiza a URL do Perfil do Topo no Google Firestore
-        await setDoc(doc(db, 'configs', 'profile'), {
-          profileImage: data.profileImage
-        });
-
-        setProfileImage(formattedImg);
-        setProfileInputUrl(formattedImg);
-        setProfileStatus({ text: "Foto de perfil enviada e atualizada com sucesso!", type: "success" });
-      } else {
-        const err = await res.json();
-        setProfileStatus({ text: err.error || "Ocorreu um erro no upload.", type: "error" });
-      }
+      setProfileImage(downloadUrl);
+      setProfileInputUrl(downloadUrl);
+      setProfileStatus({ text: "Foto de perfil enviada e atualizada com sucesso no Firebase!", type: "success" });
     } catch (e: any) {
-      console.error("Erro ao enviar foto de avatar:", e);
-      setProfileStatus({ text: "Erro de rede ao carregar a imagem de perfil.", type: "error" });
+      console.error("Erro ao enviar foto de avatar para o Storage:", e);
+      setProfileStatus({ text: `Erro ao fazer upload da imagem: ${e.message || e}`, type: "error" });
     } finally {
       setProfileUploading(false);
     }
@@ -598,7 +611,7 @@ export function Admin() {
                   <span className="text-xs truncate font-mono text-white/80">{item.id}</span>
                   
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => handleDelete(item.id, item.url)}
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 transition-colors text-sm font-bold mt-auto active:scale-95 cursor-pointer"
                   >
                     <Trash2 size={16} />

@@ -15,6 +15,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() 
+          && request.auth.token.email == 'dweminem@gmail.com' 
+          && request.auth.token.email_verified == true;
+    }
+
     // Entity validator for gallery items
     function isValidMediaItem(data) {
       return data.keys().hasAll(['id', 'type', 'url', 'alt', 'createdAt'])
@@ -35,15 +41,15 @@ service cloud.firestore {
     // Media collection matches
     match /media/{mediaId} {
       allow read: if true; // Public can see photos and videos
-      allow create: if isSignedIn() && isValidId(mediaId) && isValidMediaItem(request.resource.data);
-      allow update: if isSignedIn() && isValidId(mediaId) && isValidMediaItem(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(mediaId);
+      allow create: if isAdmin() && isValidId(mediaId) && isValidMediaItem(request.resource.data);
+      allow update: if isAdmin() && isValidId(mediaId) && isValidMediaItem(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Configurations collection matches
     match /configs/{configId} {
       allow read: if true; // Public can read configs (like profile image)
-      allow write: if isSignedIn() && isValidId(configId) && isValidProfileConfig(request.resource.data);
+      allow write: if isAdmin() && isValidId(configId) && isValidProfileConfig(request.resource.data);
     }
   }
 }
