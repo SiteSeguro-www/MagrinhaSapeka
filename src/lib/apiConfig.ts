@@ -2,9 +2,11 @@ const isExternal = !window.location.hostname.includes("run.app") &&
                      window.location.hostname !== "localhost" && 
                      window.location.hostname !== "127.0.0.1";
 
-export const API_BASE_URL = isExternal 
+// Permite definir a URL de produção na Vercel através de variáveis de ambiente.
+// Caso contrário, usa a URL do ambiente de testes (sandbox) do AI Studio.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isExternal 
   ? "https://ais-pre-voop6yrtycadndon66d4j4-109493740571.us-east5.run.app" 
-  : "";
+  : "");
 
 export function getApiUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
