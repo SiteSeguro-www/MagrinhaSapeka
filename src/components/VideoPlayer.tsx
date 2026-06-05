@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';
-import Player from 'video.js/dist/types/player';
+import type Player from 'video.js/dist/types/player';
 import 'video.js/dist/video-js.css';
 
 interface VideoPlayerProps {
@@ -10,79 +10,55 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = (props: VideoPlayerProps) => {
-  const videoRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Player | null>(null);
   const { src, className, onReady } = props;
 
+  const getMimeType = (url: string) => {
+    const u = url.toLowerCase();
+    if (u.endsWith('.mp3')) return 'audio/mpeg';
+    if (u.endsWith('.m4a')) return 'audio/mp4';
+    if (u.endsWith('.wav')) return 'audio/wav';
+    if (u.endsWith('.ogg')) return 'audio/ogg';
+    return 'video/mp4';
+  };
+
   useEffect(() => {
-    // Make sure Video.js player is only initialized once
-    if (!playerRef.current && videoRef.current) {
-      const videoElement = document.createElement("video");
-      videoElement.classList.add('video-js', 'vjs-big-play-centered', 'vjs-theme-city');
-      videoRef.current.appendChild(videoElement);
+    if (!videoRef.current) return;
 
-      const player = playerRef.current = videojs(videoElement, {
-        autoplay: true,
-        controls: true,
-        responsive: true,
-        fluid: true,
-        muted: true, // Required for autoplay in most browsers
-        preload: 'auto',
-        controlBar: {
-          children: [
-            'playToggle',
-            'volumePanel',
-            'currentTimeDisplay',
-            'timeDivider',
-            'durationDisplay',
-            'progressControl',
-            'liveDisplay',
-            'remainingTimeDisplay',
-            'customControlSpacer',
-            'playbackRateMenuButton',
-            'chaptersButton',
-            'descriptionsButton',
-            'subsCapsButton',
-            'audioTrackButton',
-            'fullscreenToggle'
-          ]
-        },
-        sources: [{
-          src: src,
-          type: 'video/mp4'
-        }]
-      }, () => {
-        onReady && onReady(player);
-      });
-
-      player.on('error', () => {
-        const error = player.error();
-        console.error('VideoJS Error:', error);
-      });
-
-    } else if (playerRef.current) {
-      const player = playerRef.current;
-      player.src({ src, type: 'video/mp4' });
-      player.load();
-      player.play().catch(e => console.log("Autoplay blocked or failed:", e));
-    }
-  }, [src]);
-
-  // Dispose the player on unmount
-  useEffect(() => {
-    const player = playerRef.current;
+    // Initialize Video.js player
+    const player = playerRef.current = videojs(videoRef.current, {
+      autoplay: false,
+      controls: true,
+      responsive: true,
+      fluid: true,
+      preload: 'auto',
+      sources: [{ 
+        src: src, 
+        type: getMimeType(src)
+      }]
+    }, () => {
+      // Callback after player is ready
+      onReady && onReady(player);
+    });
 
     return () => {
-      if (player && !player.isDisposed()) {
-        player.dispose();
+      if (playerRef.current) {
+        playerRef.current.dispose();
         playerRef.current = null;
       }
     };
-  }, [playerRef]);
+  }, [src]);
 
   return (
-    <div data-vjs-player className={className}>
-      <div ref={videoRef} />
+    <div className={className} style={{ width: '100%' }}>
+      <div data-vjs-player>
+        <video 
+          ref={videoRef} 
+          className="video-js vjs-big-play-centered"
+          playsInline 
+        />
+      </div>
     </div>
   );
 }

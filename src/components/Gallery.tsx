@@ -222,7 +222,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               {activeMedia.type === 'video' ? (
                 <VideoPlayer 
                   src={getMediaUrl(activeMedia.url, activeMedia.isLocal)}
-                  className="max-w-full max-h-[90vh] object-contain bg-black"
+                  className="w-full h-auto bg-black"
                 />
               ) : (
                 <img 
