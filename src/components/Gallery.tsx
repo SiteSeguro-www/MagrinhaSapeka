@@ -105,7 +105,7 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
   const photosOnly = allItems.filter(i => i.type === 'photo');
 
   return (
-    <div className="bg-black py-12 md:-mt-32 relative z-20">
+    <div className="bg-black py-12 md:-mt-24 relative z-20">
       <div className="space-y-4">
         <NetflixRow 
           title="Em Alta Agora" 

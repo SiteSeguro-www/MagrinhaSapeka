@@ -53,7 +53,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
   }, []);
 
   return (
-    <section className="relative w-full h-[85vh] md:h-[95vh] flex items-end overflow-hidden">
+    <section className="relative w-full h-[85vh] md:h-screen flex items-center md:items-end overflow-hidden">
       {/* Cinematic Background Image */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -70,7 +70,7 @@ export function Hero({ onActivate, isUnlocked }: HeroProps) {
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-24 pointer-events-none"
+        className="relative z-30 w-full max-w-7xl mx-auto px-4 md:px-8 pb-32 md:pb-64 pointer-events-none"
       >
         <div className="max-w-2xl pointer-events-auto">
           <motion.div
