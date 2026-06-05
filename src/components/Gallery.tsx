@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Play, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { getApiUrl, getMediaUrl } from '../lib/api';
+import { VideoPlayer } from './VideoPlayer';
 
 interface MediaItem {
   id: string;
@@ -219,11 +220,9 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               className="relative max-w-5xl w-full max-h-[90vh] rounded-2xl overflow-hidden glass shadow-2xl flex items-center justify-center"
             >
               {activeMedia.type === 'video' ? (
-                <video 
-                  src={getMediaUrl(activeMedia.url, activeMedia.isLocal)} 
-                  controls 
-                  autoPlay 
-                  playsInline
+                <VideoPlayer 
+                  src={getMediaUrl(activeMedia.url, activeMedia.isLocal)}
+                  vastTag="https://s.magsrv.com/v1/vast.php?idz=5943328"
                   className="max-w-full max-h-[90vh] object-contain bg-black"
                 />
               ) : (
