@@ -377,11 +377,11 @@ export function Admin() {
   // TELA DE LOGIN DO ADMIN (Focada em Firebase Google Login)
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto px-6 py-20 pb-32 flex flex-col justify-center min-h-[70vh]">
+      <div className="max-w-xl mx-auto px-6 py-12 pb-32 flex flex-col justify-center min-h-[70vh] font-sans">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass p-8 rounded-3xl border border-primary/20 flex flex-col items-center text-center shadow-xl"
+          className="glass p-8 rounded-3xl border border-primary/20 flex flex-col items-center text-center shadow-xl mb-8"
         >
           <div className="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-6">
             <ShieldAlert size={32} />
@@ -389,17 +389,20 @@ export function Admin() {
           
           <h1 className="text-3xl font-black mb-2 text-foreground">Painel de Administração</h1>
           <p className="text-sm text-muted-foreground mb-8">
-            Área de acesso restrita para upload e gerenciamento de fotos e vídeos da plataforma utilizando autenticação segura com Firebase.
+            Área de acesso restrita para upload e gerenciamento de mídias conectada ao Firebase em tempo real.
           </p>
 
           <div className="w-full flex flex-col gap-4">
             {statusMsg && (
               <div className={cn(
-                "p-4 rounded-xl text-sm flex items-center gap-3",
+                "p-4 rounded-xl text-sm flex flex-col gap-2 text-left",
                 statusMsg.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
               )}>
-                {statusMsg.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-                <span>{statusMsg.text}</span>
+                <div className="flex items-center gap-3">
+                  {statusMsg.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                  <span className="font-bold">{statusMsg.type === 'success' ? 'Sucesso' : 'Falha no Login'}</span>
+                </div>
+                <span className="text-xs font-mono break-all">{statusMsg.text}</span>
               </div>
             )}
 
@@ -410,7 +413,52 @@ export function Admin() {
               <LogIn size={20} />
               Entrar com Google (Firebase)
             </button>
-            <p className="text-xs text-muted-foreground">Seu e-mail será autenticado permanentemente para conceder acesso para os uploads.</p>
+            <p className="text-xs text-muted-foreground">Logue apenas com <strong className="text-primary">dweminem@gmail.com</strong> para obter acesso de gravação.</p>
+          </div>
+        </motion.div>
+
+        {/* Guia de Configuração para Vercel */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-zinc-950/40 p-6 rounded-2xl border border-border text-left"
+        >
+          <h3 className="text-amber-500 text-sm font-extrabold flex items-center gap-2 mb-3">
+            <span>⚠️</span> ATENÇÃO: CONFIGURAÇÃO DO SEU FIREBASE PARA A VERCEL
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+            Se você estiver acessando pela Vercel (<code className="text-primary">magrinha-sapeka.vercel.app</code>), o login do Google falhará ou as imagens de upload não serão exibidas para visitas públicas se você não concluir os 2 ajustes abaixo no seu Console do Firebase:
+          </p>
+
+          <div className="flex flex-col gap-4 text-xs">
+            <div className="p-3 rounded-lg bg-background/50 border border-border/60">
+              <span className="font-bold text-foreground block mb-1">1. Liberar seu site Vercel no Firebase (Auth)</span>
+              <ol className="list-decimal pl-4 text-muted-foreground flex flex-col gap-1">
+                <li>Acesse o <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary font-bold underline">Console do Firebase</a> e entre em seu projeto.</li>
+                <li>Vá no menu lateral em <strong>Authentication</strong> e acesse a aba <strong>Settings</strong> (Configurações).</li>
+                <li>Clique em <strong>Authorized Domains</strong> (Domínios Autorizados) e adicione o domínio: <strong className="text-white">magrinha-sapeka.vercel.app</strong></li>
+              </ol>
+            </div>
+
+            <div className="p-3 rounded-lg bg-background/50 border border-border/60">
+              <span className="font-bold text-foreground block mb-1">2. Ativar e Configurar o Firebase Storage (Uploads)</span>
+              <ol className="list-decimal pl-4 text-muted-foreground flex flex-col gap-1">
+                <li>No menu lateral, clique em <strong>Storage</strong> (Armazenamento) e clique no botão <strong>Get Started (Começar)</strong> se ainda não tiver feito isso.</li>
+                <li>Acesse a aba <strong>Rules (Regras)</strong> e cole a regra de leitura pública e escrita autenticada abaixo:</li>
+              </ol>
+              <pre className="mt-2 p-2 bg-black/80 rounded border border-border text-[10px] text-zinc-300 font-mono overflow-x-auto whitespace-pre">
+{`rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'dweminem@gmail.com';
+    }
+  }
+}`}
+              </pre>
+            </div>
           </div>
         </motion.div>
       </div>

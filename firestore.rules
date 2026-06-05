@@ -25,17 +25,17 @@ service cloud.firestore {
     function isValidMediaItem(data) {
       return data.keys().hasAll(['id', 'type', 'url', 'alt', 'createdAt'])
           && data.keys().size() == 5
-          && data.id is string && data.id.size() <= 200
+          && data.id is string && data.id.size() <= 250
           && (data.type == 'photo' || data.type == 'video')
-          && data.url is string && data.url.size() <= 500
-          && data.alt is string && data.alt.size() <= 200;
+          && data.url is string && data.url.size() <= 2000
+          && data.alt is string && data.alt.size() <= 300;
     }
 
     // Entity validator for profile config
     function isValidProfileConfig(data) {
       return data.keys().hasAll(['profileImage'])
           && data.keys().size() == 1
-          && data.profileImage is string && data.profileImage.size() <= 500;
+          && data.profileImage is string && data.profileImage.size() <= 2000;
     }
 
     // Media collection matches

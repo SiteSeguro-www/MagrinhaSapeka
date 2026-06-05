@@ -2,7 +2,30 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import firebaseConfig from '../../firebase-applet-config.json';
+
+// Default configuration from AI Studio database instance
+const defaultFirebaseConfig = {
+  projectId: "gen-lang-client-0668923042",
+  appId: "1:163360259347:web:e011aab4ea65aaef9faee6",
+  apiKey: "AIzaSyDXR862jJsYmjeTHCOWzjAmemB6W_uijbA",
+  authDomain: "gen-lang-client-0668923042.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-95ffb02d-6631-4465-ba20-4db606a7b457",
+  storageBucket: "gen-lang-client-0668923042.firebasestorage.app",
+  messagingSenderId: "163360259347",
+  measurementId: "G-3STD89MEKE"
+};
+
+// Resilient Firebase initialization that supports both build-time fallback or Vercel ENV overrides
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || defaultFirebaseConfig.appId,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || defaultFirebaseConfig.measurementId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || defaultFirebaseConfig.firestoreDatabaseId
+};
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
