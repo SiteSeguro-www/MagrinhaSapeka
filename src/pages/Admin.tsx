@@ -17,6 +17,7 @@ export function Admin() {
   const [token, setToken] = useState('');
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +104,7 @@ export function Admin() {
     setStatusMsg(null);
   };
 
-  // Funções de Drag & Drop
+  // Funções de Drag & Drop para múltiplos arquivos (Lote)
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -119,25 +120,30 @@ export function Admin() {
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      uploadFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      uploadFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      uploadFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      uploadFiles(Array.from(e.target.files));
     }
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFiles = async (files: File[]) => {
     setUploading(true);
+    setUploadingCount(files.length);
     setStatusMsg(null);
     const formData = new FormData();
-    formData.append("file", file);
+    
+    // Anexa todos os arquivos ao campo "files" correspondente ao Multer array
+    files.forEach(file => {
+      formData.append("files", file);
+    });
 
     try {
-      const res = await fetch('/api/admin/upload', {
+      const res = await fetch('/api/admin/upload-multiple', {
         method: 'POST',
         headers: {
           'Authorization': token
@@ -146,16 +152,17 @@ export function Admin() {
       });
 
       if (res.ok) {
-        setStatusMsg({ text: "Arquivo enviado com sucesso!", type: "success" });
+        setStatusMsg({ text: `${files.length} arquivo(s) enviado(s) com sucesso em lote!`, type: "success" });
         fetchMedia(); // Recarrega galeria
       } else {
         const err = await res.json();
-        setStatusMsg({ text: err.error || "Ocorreu um erro no upload.", type: "error" });
+        setStatusMsg({ text: err.error || "Ocorreu um erro no upload em lote.", type: "error" });
       }
     } catch (e) {
-      setStatusMsg({ text: "Erro na rede ao tentar enviar o arquivo.", type: "error" });
+      setStatusMsg({ text: "Erro na rede ao tentar enviar os arquivos.", type: "error" });
     } finally {
       setUploading(false);
+      setUploadingCount(0);
     }
   };
 
@@ -429,13 +436,14 @@ export function Admin() {
           type="file" 
           className="hidden" 
           accept="image/*,video/*"
+          multiple
           onChange={handleFileChange}
         />
         
         {uploading ? (
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 rounded-full border-4 border-t-transparent border-primary animate-spin" />
-            <p className="text-lg font-bold text-primary animate-pulse">Enviando arquivos e mídias para o servidor...</p>
+            <p className="text-lg font-bold text-primary animate-pulse">Enviando {uploadingCount} arquivo(s) em lote para o servidor...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
@@ -443,11 +451,11 @@ export function Admin() {
               <Upload size={32} />
             </div>
             <div>
-              <p className="text-lg font-bold">Arraste e solte fotos ou vídeos aqui</p>
-              <p className="text-sm text-muted-foreground mt-1">Ou clique para selecionar no seu dispositivo</p>
+              <p className="text-lg font-bold">Arraste e solte várias fotos ou vídeos aqui (Lote)</p>
+              <p className="text-sm text-muted-foreground mt-1">Ou clique para selecionar vários no seu dispositivo</p>
             </div>
             <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full uppercase font-semibold">
-              Tipos aceitos: JPG, PNG, WEBP, MP4, WEBM (Max 100MB)
+              Tipos aceitos: JPG, PNG, WEBP, MP4, WEBM (Max 100MB por lote)
             </span>
           </div>
         )}

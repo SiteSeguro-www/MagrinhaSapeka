@@ -131,6 +131,28 @@ app.post("/api/admin/upload", requireAdmin, upload.single("file"), (req, res) =>
   });
 });
 
+// Upload de múltiplos arquivos de mídia em lote (protegido por senha)
+app.post("/api/admin/upload-multiple", requireAdmin, upload.array("files", 100), (req, res) => {
+  if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+    return res.status(400).json({ error: "Selecione pelo menos um arquivo válido para upload em lote." });
+  }
+
+  const uploadedFiles = req.files.map(file => {
+    const isVideo = ['.mp4', '.webm', '.mov'].includes(path.extname(file.filename).toLowerCase());
+    return {
+      id: file.filename,
+      type: isVideo ? 'video' : 'photo',
+      url: `/media/${file.filename}`,
+      alt: file.filename
+    };
+  });
+
+  res.json({
+    success: true,
+    files: uploadedFiles
+  });
+});
+
 // Deleção de arquivo de mídia (protegido por senha)
 app.delete("/api/admin/delete", requireAdmin, (req, res) => {
   const { filename } = req.body;
