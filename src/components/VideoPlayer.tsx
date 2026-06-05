@@ -1,40 +1,30 @@
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
-import 'videojs-contrib-ads';
-import 'videojs-ima';
-import 'videojs-ima/dist/videojs.ima.css';
 
 interface VideoPlayerProps {
   src: string;
-  vastTag?: string;
   className?: string;
 }
 
-export function VideoPlayer({ src, vastTag, className }: VideoPlayerProps) {
+export function VideoPlayer({ src, className }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!videoRef.current) return;
 
-    // Inicializa o player
     const player = videojs(videoRef.current, {
       autoplay: true,
+      muted: true,
       controls: true,
       responsive: true,
       fluid: true,
       sources: [{ src, type: 'video/mp4' }]
-    }, () => {
-      console.log('Player inicializado');
+    });
 
-      if (vastTag) {
-        (player as any).ima({
-          adTagUrl: vastTag,
-        });
-        (player as any).ima.initializeAdDisplayContainer();
-        (player as any).ima.requestAds();
-      }
+    player.ready(() => {
+      console.log('Player inicializado');
     });
 
     playerRef.current = player;
@@ -44,7 +34,7 @@ export function VideoPlayer({ src, vastTag, className }: VideoPlayerProps) {
         playerRef.current.dispose();
       }
     };
-  }, [src, vastTag]);
+  }, [src]);
 
   return (
     <div data-vjs-player className={className}>

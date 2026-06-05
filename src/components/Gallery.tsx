@@ -222,7 +222,6 @@ export function Gallery({ isUnlocked, onMediaClick }: { isUnlocked: boolean, onM
               {activeMedia.type === 'video' ? (
                 <VideoPlayer 
                   src={getMediaUrl(activeMedia.url, activeMedia.isLocal)}
-                  vastTag="https://s.magsrv.com/v1/vast.php?idz=5943328"
                   className="max-w-full max-h-[90vh] object-contain bg-black"
                 />
               ) : (
