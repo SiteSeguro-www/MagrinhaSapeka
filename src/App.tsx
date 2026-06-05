@@ -23,16 +23,17 @@ export default function App() {
   const reminderRef = useRef<number | null>(null);
 
   const handleActivate = async () => {
-    setModalOpen(false);
     const granted = await requestPermission();
     if (granted) {
+      setModalOpen(false);
       // Clear reminder if granted
       if (reminderRef.current) {
         clearInterval(reminderRef.current);
         reminderRef.current = null;
       }
     } else {
-      // Setup reminder interval if denied
+      // If denied or dismissed, close modal and wait for next interval
+      setModalOpen(false);
       setupReminder();
     }
   };
@@ -47,13 +48,19 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!isUnlocked && permissionState === 'denied') {
+    if (!isUnlocked) {
+      // Very short delay on first load
+      const timeout = setTimeout(() => {
+        if (!isUnlocked) setModalOpen(true);
+      }, 1000);
+
       setupReminder();
+      return () => {
+        clearTimeout(timeout);
+        if (reminderRef.current) clearInterval(reminderRef.current);
+      };
     }
-    return () => {
-      if (reminderRef.current) clearInterval(reminderRef.current);
-    };
-  }, [isUnlocked, permissionState]);
+  }, [isUnlocked]);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">

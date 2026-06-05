@@ -67,13 +67,7 @@ export function useNotification() {
     try {
       const permission = await Notification.requestPermission();
       updateState(permission);
-      
-      if (permission === 'granted') {
-        alert("Notificações ativadas com sucesso! Conteúdo liberado.");
-        return true;
-      } else {
-        return false;
-      }
+      return permission === 'granted';
     } catch (error) {
       console.error("Erro ao solicitar permissão:", error);
       return false;
